@@ -5490,9 +5490,7 @@ window.__auditKawkabatIndependentStarsV236=function(){
   var attempts = 0;
   var timer = setInterval(function () {
     attempts += 1;
-    if (discover() || attempts >= 2400) {
-      if (attempts >= 2400) clearInterval(timer);
-    }
+    if (discover() || attempts >= 2400) clearInterval(timer);
   }, 250);
 
   frame.addEventListener('load', function () {
