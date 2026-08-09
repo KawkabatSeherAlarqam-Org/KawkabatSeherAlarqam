@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Gold Motifs + Six-Day Sequence V290</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" allowfullscreen src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/840ec29a98dfec65d2d7948bb6fe7afb41edd068/public/kawkabat-v290-layer-02-six-day-sequence-no-saturday.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var timer=null;
+var INWARD_SHIFT=10;
+
+function visit(doc,callback,depth){
+  if(!doc||depth>220)return;
+  callback(doc);
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){
+    try{visit(frames[i].contentDocument,callback,depth+1);}catch(error){}
+  }
+}
+
+function polar(cx,cy,r,degree){
+  var angle=(degree-90)*Math.PI/180;
+  return{x:cx+Math.cos(angle)*r,y:cy+Math.sin(angle)*r};
+}
+
+function applyToWheel(doc){
+  var svg=doc.getElementById('wheel');
+  var outerFrame=doc.getElementById('outerBlackFrame');
+  var band=doc.getElementById('v33OrnamentalBand');
+  if(!svg||!outerFrame||!band)return false;
+  var blackBand=outerFrame.querySelector('.outer-black-band');
+  if(!blackBand)return false;
+  var uses=band.querySelectorAll('use');
+  if(uses.length!==64)return false;
+  var viewBox=(svg.getAttribute('viewBox')||'0 0 4400 3600').trim().split(/\s+/).map(Number);
+  var cx=(viewBox[0]||0)+(viewBox[2]||4400)/2;
+  var cy=(viewBox[1]||0)+(viewBox[3]||3600)/2;
+  var bandRadius=Number.parseFloat(blackBand.getAttribute('r'));
+  if(!Number.isFinite(bandRadius))return false;
+  var motifRadius=bandRadius-INWARD_SHIFT;
+  for(var index=0;index<uses.length;index+=1){
+    var degree=index*(360/uses.length);
+    var point=polar(cx,cy,motifRadius,degree);
+    uses[index].setAttribute('transform','translate('+point.x.toFixed(3)+' '+point.y.toFixed(3)+') rotate('+degree.toFixed(3)+')');
+    uses[index].setAttribute('data-v87-inside-black-band','true');
+  }
+  band.dataset.v87MotifRadius=String(motifRadius);
+  doc.documentElement.dataset.v87GoldMotifsInsideBlackBand='true';
+  doc.defaultView.__auditKawkabatGoldMotifsInsideBlackBandV87=function(){
+    return{
+      ok:band.querySelectorAll('use[data-v87-inside-black-band="true"]').length===64,
+      sourceVersion:'V86',
+      motifCount:uses.length,
+      bandRadius:bandRadius,
+      motifRadius:motifRadius,
+      inwardShift:INWARD_SHIFT,
+      motifShapeChanged:false,
+      motifSizeChanged:false,
+      blackBandChanged:false,
+      ornateFrameChanged:false,
+      wheelGeometryChanged:false,
+      toolbarChanged:false,
+      panelLayoutChanged:false,
+      twoLineZodiacPreserved:true
+    };
+  };
+  return true;
+}
+
+function apply(){
+  var done=false;
+  try{
+    visit(frame.contentDocument,function(doc){
+      if(done)return;
+      if(applyToWheel(doc))done=true;
+    },0);
+  }catch(error){}
+  return done;
+}
+
+function start(){
+  if(timer)clearTimeout(timer);
+  var attempts=0;
+  function boot(){
+    attempts+=1;
+    if(apply()||attempts>=240){
+      timer=null;
+      return;
+    }
+    timer=setTimeout(boot,100);
+  }
+  boot();
+}
+
+frame.addEventListener('load',start);
+start();
+}());
+</script>
+</body>
+</html>
