@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Numbered Days 1–36 Six-Day Sequence V291</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" allowfullscreen src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/e2cfd097a4e12575117b9c1c29cbe8904026bcc3/public/kawkabat-v209-layer-03.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var bootTimer=null;
+var repairTimer=null;
+var observer=null;
+var observedGroup=null;
+var NS='http://www.w3.org/2000/svg';
+var days=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
+var zodiac=['نار الحمل','تراب الثور','هواء الجوزاء','ماء السرطان','نار الأسد','تراب السنبلة','هواء الميزان','ماء العقرب','نار القوس','تراب الجدي','هواء الدلو','ماء الحوت'];
+
+function visit(doc,callback,depth){
+  if(!doc||depth>180)return;
+  callback(doc);
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){
+    try{visit(frames[i].contentDocument,callback,depth+1);}catch(error){}
+  }
+}
+
+function findReadyWheelDocument(){
+  var found=null;
+  try{
+    visit(frame.contentDocument,function(doc){
+      if(found)return;
+      var group=doc.getElementById('allBalancedDaysZodiac');
+      if(!group||group.querySelectorAll('.day-zodiac-cell').length!==36)return;
+      if(!doc.documentElement.dataset.v50LiveLanguage)return;
+      found=doc;
+    },0);
+  }catch(error){}
+  return found;
+}
+
+function line(doc,x,y,value,size,weight,role){
+  var node=doc.createElementNS(NS,'tspan');
+  node.setAttribute('x',String(x));
+  node.setAttribute('y',String(y));
+  node.setAttribute('data-v81-line',role);
+  node.style.setProperty('font-size',size+'px','important');
+  node.style.setProperty('font-weight',String(weight),'important');
+  node.textContent=value;
+  return node;
+}
+
+function dayNameAt(index){
+  return index===0?'الجمعة':days[(index-1)%days.length];
+}
+
+function dayLabelAt(index){
+  return String(index+1)+' '+dayNameAt(index);
+}
+
+function zodiacAt(index){
+  return index===0?'ماء الحوت':zodiac[(index-1)%12];
+}
+
+function correct(group){
+  if(!group)return false;
+  var cells=group.querySelectorAll('.day-zodiac-cell');
+  if(cells.length!==36)return false;
+  for(var i=0;i<cells.length;i+=1){
+    var text=cells[i].querySelector('text');
+    if(!text)return false;
+    var day=text.querySelectorAll('tspan[data-v81-line="day"]');
+    var sign=text.querySelectorAll('tspan[data-v81-line="element-zodiac"]');
+    if(day.length!==1||sign.length!==1)return false;
+    if(day[0].getAttribute('y')!=='-18'||sign[0].getAttribute('y')!=='18')return false;
+    if(String(day[0].textContent||'').trim()!==dayLabelAt(i))return false;
+    if(String(sign[0].textContent||'').trim()!==zodiacAt(i))return false;
+  }
+  return true;
+}
+
+function repair(doc){
+  var group=doc.getElementById('allBalancedDaysZodiac');
+  if(!group||group.querySelectorAll('.day-zodiac-cell').length!==36)return false;
+  if(correct(group))return true;
+  var cells=group.querySelectorAll('.day-zodiac-cell');
+  for(var index=0;index<36;index+=1){
+    var text=cells[index].querySelector('text');
+    if(!text)continue;
+    var day=dayLabelAt(index);
+    var sign=zodiacAt(index);
+    var x=Number(text.getAttribute('x'))||0;
+    while(text.firstChild)text.removeChild(text.firstChild);
+    text.setAttribute('direction','rtl');
+    text.setAttribute('unicode-bidi','plaintext');
+    text.setAttribute('text-anchor','middle');
+    text.style.setProperty('font-family','Arial, Tahoma, sans-serif','important');
+    text.style.setProperty('pointer-events','none','important');
+    text.appendChild(line(doc,x,-18,day,26,700,'day'));
+    text.appendChild(line(doc,x,18,sign,29,800,'element-zodiac'));
+    cells[index].dataset.v291NumberedDay='1-to-36';
+  }
+  doc.documentElement.dataset.v291NumberedDays='1-to-36-six-day-cycle';
+  return correct(group);
+}
+
+function scheduleRepair(doc){
+  if(repairTimer)clearTimeout(repairTimer);
+  repairTimer=setTimeout(function(){
+    repairTimer=null;
+    repair(doc);
+  },30);
+}
+
+function install(){
+  var doc=findReadyWheelDocument();
+  if(!doc)return false;
+  var group=doc.getElementById('allBalancedDaysZodiac');
+  repair(doc);
+  if(observedGroup!==group){
+    if(observer)observer.disconnect();
+    observer=new doc.defaultView.MutationObserver(function(){
+      if(!correct(group))scheduleRepair(doc);
+    });
+    observer.observe(group,{childList:true,subtree:true});
+    observedGroup=group;
+  }
+  if(doc.documentElement.dataset.v81LanguageListener!=='true'){
+    doc.documentElement.dataset.v81LanguageListener='true';
+    doc.defaultView.addEventListener('gannzilla:language-change',function(){
+      scheduleRepair(doc);
+    });
+  }
+  doc.defaultView.__auditKawkabatPersistentTwoLineZodiacV81=function(){
+    return{
+      ok:correct(group),
+      sourceVersion:'V291-numbered-days-1-to-36',
+      languageLayerReady:!!doc.documentElement.dataset.v50LiveLanguage,
+      dayLineCount:group.querySelectorAll('tspan[data-v81-line="day"]').length,
+      elementZodiacLineCount:group.querySelectorAll('tspan[data-v81-line="element-zodiac"]').length,
+      dayAbove:true,
+      elementAndZodiacBelow:true,
+      persistentAfterLanguageChange:true,
+      cellGeometryChanged:false,
+      wheelGeometryChanged:false,
+      ornateFrameChanged:false,
+      panelJitterFixPreserved:true
+    };
+  };
+  return correct(group);
+}
+
+function start(){
+  if(bootTimer)clearTimeout(bootTimer);
+  var attempts=0;
+  function boot(){
+    attempts+=1;
+    if(install()||attempts>=240){
+      bootTimer=null;
+      return;
+    }
+    bootTimer=setTimeout(boot,100);
+  }
+  boot();
+}
+
+frame.addEventListener('load',start);
+start();
+}());
+</script>
+</body>
+</html>
