@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>كوكبة الأرقام السحرية V410 — نسب ثابتة المواضع مع أي قيمة للعجلة</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}
+    #v409-frame{display:block;width:100%;height:100%;border:0}
+  </style>
+</head>
+<body>
+  <iframe id="v409-frame" title="كوكبة الأرقام السحرية"
+    src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/e83ab8470ded475909401e81d190f1b9e3c35891/public/kawkabat-al-arqam-al-sihria-v409-editable-wheel-value-all-23-silver.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('v409-frame');
+    var RATIOS=[
+      [11,'11.8%'],[14,'14.6%'],[23,'23.6%'],[27,'27.2%'],[38,'38.2%'],
+      [50,'50%'],[61,'61.8%'],[72,'72.8%'],[78,'78.6%'],[87,'87.6%'],[88,'88.2%'],
+      [100,'100%'],[113,'113%'],[127,'127.2%'],[138,'138.2%'],[141,'141.4%'],
+      [150,'150%'],[161,'161.8%'],[172,'172.8%'],[200,'200%'],
+      [261,'261.8%'],[361,'361.8%'],[423,'423.6%']
+    ];
+    var CX=2200,CY=1800;
+    function visit(doc,callback,depth){
+      if(!doc||depth>440)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function canonicalSlot(node){
+      var x=Number(node.getAttribute('x')),y=Number(node.getAttribute('y'));
+      if(!Number.isFinite(x)||!Number.isFinite(y))return null;
+      var degree=(Math.atan2(y-CY,x-CX)*180/Math.PI+90+360)%360;
+      var step=Math.round(degree/10)%36;
+      return step===0?36:step;
+    }
+    function locateByFixedPosition(doc,target){
+      var requiredOffset=Math.floor((target-1)/36);
+      var requiredSlot=((target-1)%36)+1;
+      var nodes=doc.querySelectorAll('.approved-cycle-number');
+      for(var i=0;i<nodes.length;i++){
+        var offset=Number.parseInt(nodes[i].getAttribute('data-cycle-offset')||'-1',10);
+        if(offset!==requiredOffset)continue;
+        if(canonicalSlot(nodes[i])===requiredSlot)return nodes[i];
+      }
+      return null;
+    }
+    function addStop(doc,gradient,offset,color){
+      var stop=doc.createElementNS('http://www.w3.org/2000/svg','stop');
+      stop.setAttribute('offset',offset);stop.setAttribute('stop-color',color);gradient.appendChild(stop);
+    }
+    function ensureGradient(doc,svg){
+      var defs=svg.querySelector('defs');
+      if(!defs){defs=doc.createElementNS('http://www.w3.org/2000/svg','defs');svg.insertBefore(defs,svg.firstChild);}
+      var gradient=doc.getElementById('v410AllRatiosSilverGloss');
+      if(!gradient){
+        gradient=doc.createElementNS('http://www.w3.org/2000/svg','linearGradient');gradient.id='v410AllRatiosSilverGloss';
+        gradient.setAttribute('x1','0%');gradient.setAttribute('y1','0%');gradient.setAttribute('x2','100%');gradient.setAttribute('y2','0%');
+        addStop(doc,gradient,'0%','#7F909B');addStop(doc,gradient,'16%','#BCC9D0');
+        addStop(doc,gradient,'34%','#EEF4F7');addStop(doc,gradient,'46%','#FFFFFF');
+        addStop(doc,gradient,'55%','#D6E0E5');addStop(doc,gradient,'70%','#F8FBFC');
+        addStop(doc,gradient,'84%','#B7C4CB');addStop(doc,gradient,'100%','#758791');defs.appendChild(gradient);
+      }
+    }
+    function createBadge(doc,wheel,target,ratio){
+      var badge=doc.createElementNS('http://www.w3.org/2000/svg','g');
+      badge.id='v410FibCell'+target;badge.setAttribute('pointer-events','none');
+      badge.setAttribute('data-v410-fixed-cell',String(target));badge.setAttribute('data-fibonacci-ratio',ratio);
+      var background=doc.createElementNS('http://www.w3.org/2000/svg','rect');
+      background.setAttribute('x','-36');background.setAttribute('y','-15');background.setAttribute('width','72');
+      background.setAttribute('height','30');background.setAttribute('rx','15');
+      background.style.setProperty('fill','url(#v410AllRatiosSilverGloss)','important');
+      background.style.setProperty('fill-opacity','0.94','important');background.style.setProperty('stroke','#A67C52','important');
+      background.style.setProperty('stroke-width','1.4px','important');
+      background.style.setProperty('filter','drop-shadow(0px 1.2px 1.4px rgba(50,68,78,.36))','important');badge.appendChild(background);
+      var label=doc.createElementNS('http://www.w3.org/2000/svg','text');
+      label.setAttribute('x','0');label.setAttribute('y','0');label.setAttribute('text-anchor','middle');
+      label.setAttribute('dominant-baseline','central');label.style.setProperty('font-family','Arial, sans-serif','important');
+      label.style.setProperty('font-size','20px','important');label.style.setProperty('font-weight','700','important');
+      label.style.setProperty('fill','#6F4A1F','important');label.textContent=ratio;badge.appendChild(label);wheel.appendChild(badge);return badge;
+    }
+    function positionBadge(badge,cell){
+      var x=Number(cell.getAttribute('x')),y=Number(cell.getAttribute('y'));
+      var dx=x-CX,dy=y-CY,radius=Math.hypot(dx,dy)||1;
+      var labelX=x-(dx/radius*42),labelY=y-(dy/radius*42),angle=Math.atan2(dy,dx)*180/Math.PI+90;
+      while(angle>90)angle-=180;while(angle<-90)angle+=180;
+      badge.setAttribute('transform','translate('+labelX+' '+labelY+') rotate('+angle.toFixed(3)+')');
+    }
+    function render(){
+      var root=null;try{root=frame.contentDocument;}catch(error){}
+      if(!root)return false;
+      var wheelDoc=visit(root,function(doc){return doc.getElementById('wheel')&&doc.getElementById('v393FibonacciLabels')?doc:null;},0);
+      if(!wheelDoc)return false;
+      var obsolete=wheelDoc.querySelectorAll('g[data-v409-fibonacci-cell]');
+      for(var o=0;o<obsolete.length;o++)obsolete[o].style.setProperty('visibility','hidden','important');
+      var wheel=wheelDoc.getElementById('wheel');ensureGradient(wheelDoc,wheel);
+      var visible=wheelDoc.getElementById('v393FibonacciLabels').style.display!=='none',rendered=0;
+      for(var i=0;i<RATIOS.length;i++){
+        var target=RATIOS[i][0],ratio=RATIOS[i][1],cell=locateByFixedPosition(wheelDoc,target);
+        var badge=wheelDoc.getElementById('v410FibCell'+target);
+        if(!cell){if(badge)badge.style.setProperty('display','none','important');continue;}
+        if(!badge)badge=createBadge(wheelDoc,wheel,target,ratio);
+        positionBadge(badge,cell);badge.style.setProperty('display',visible?'inline':'none','important');rendered+=1;
+      }
+      wheelDoc.documentElement.dataset.v410FibonacciRatioCount='23';
+      wheelDoc.documentElement.dataset.v410FibonacciRenderedCount=String(rendered);
+      wheelDoc.documentElement.dataset.v410FibonacciBinding='fixed-ring-and-angle-position-independent-of-wheel-value';
+      return true;
+    }
+    frame.addEventListener('load',render);
+    var attempts=0;(function boot(){attempts+=1;if(!render()&&attempts<7200)setTimeout(boot,100);}());
+    setInterval(function(){try{render();}catch(error){}},150);
+    window.__auditV410=function(){return{ready:render(),ratioCount:23,binding:'fixed-cell-position',supportsAnyWheelValue:true,supportsHalala:true};};
+  }());
+  </script>
+</body>
+</html>
