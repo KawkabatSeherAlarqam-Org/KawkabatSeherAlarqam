@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>كوكبة الأرقام السحرية V406 — تظليل فضي للنسبة الأولى فقط</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}
+    #v405-frame{display:block;width:100%;height:100%;border:0}
+  </style>
+</head>
+<body>
+  <iframe id="v405-frame" title="كوكبة الأرقام السحرية"
+    src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/630f2e338c5c47052adadb9561f1d7a0424aa50e/public/kawkabat-al-arqam-al-sihria-v405-fibonacci-all-22-ratios.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('v405-frame');
+    function visit(doc,callback,depth){
+      if(!doc||depth>380)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function applySilverShading(){
+      var root=null;try{root=frame.contentDocument;}catch(error){}
+      if(!root)return false;
+      var wheelDoc=visit(root,function(doc){
+        return doc.getElementById('v398FibCell11Background')?doc:null;
+      },0);
+      if(!wheelDoc)return false;
+      var background=wheelDoc.getElementById('v398FibCell11Background');
+      background.style.setProperty('fill','#DCE4E8','important');
+      background.style.setProperty('fill-opacity','0.68','important');
+      background.setAttribute('data-v406-silver-shading-only','true');
+      wheelDoc.documentElement.dataset.v406FirstRatioShading='silver-only';
+      return true;
+    }
+    frame.addEventListener('load',applySilverShading);
+    var attempts=0;
+    (function boot(){attempts+=1;if(!applySilverShading()&&attempts<7200)setTimeout(boot,100);}());
+    setInterval(function(){try{applySilverShading();}catch(error){}},250);
+    window.__auditV406=function(){return{ready:applySilverShading(),ratio:'11.8%',silverShadingOnly:true,geometryChanged:false};};
+  }());
+  </script>
+</body>
+</html>
