@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>كوكبة الأرقام السحرية V419 — فيبوناتشي متكرر كل 100</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}
+    #v418-frame{display:block;width:100%;height:100%;border:0}
+  </style>
+</head>
+<body>
+  <iframe id="v418-frame" title="كوكبة الأرقام السحرية"
+    src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/b6117ce34b29d08bfb136e36abfac60bfecbdd42/public/kawkabat-al-arqam-al-sihria-v418-control-panel-restored.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('v418-frame'),CX=2200,CY=1800;
+    var TEMPLATE={11:'11.8%',14:'14.6%',23:'23.6%',27:'27.2%',38:'38.2%',50:'50%',61:'61.8%',72:'72.8%',78:'78.6%',88:'88.2%',94:'94.43%',100:'100%'};
+    var renderCount=0,lastBadgeCount=0;
+    function visit(doc,callback,depth){
+      if(!doc||depth>640)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function western(value){
+      var map={'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9','۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9'};
+      var text=String(value==null?'':value).replace(/[٠-٩۰-۹]/g,function(d){return map[d]||d;}).replace(/,/g,'').trim();
+      var number=Number(text);return Number.isFinite(number)?number:null;
+    }
+    function nodeValue(node){
+      var primary=node.querySelector('tspan[data-v131-number-role="primary"]');
+      var candidates=[node.getAttribute('data-v131-display-value'),primary&&primary.textContent,node.textContent];
+      for(var i=0;i<candidates.length;i++){var number=western(candidates[i]);if(number!==null)return number;}
+      return null;
+    }
+    function decimalPlaces(value){
+      var text=String(value==null?'':value).replace(/[٠-٩]/g,function(d){return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d));}).trim();
+      var dot=text.indexOf('.');return dot<0?0:Math.min(6,text.length-dot-1);
+    }
+    function addStop(doc,gradient,offset,color){
+      var stop=doc.createElementNS('http://www.w3.org/2000/svg','stop');stop.setAttribute('offset',offset);stop.setAttribute('stop-color',color);gradient.appendChild(stop);
+    }
+    function ensureGradient(doc,wheel){
+      var defs=wheel.querySelector('defs');if(!defs){defs=doc.createElementNS('http://www.w3.org/2000/svg','defs');wheel.insertBefore(defs,wheel.firstChild);}
+      var gradient=doc.getElementById('v419RepeatingFibSilverGloss');
+      if(!gradient){
+        gradient=doc.createElementNS('http://www.w3.org/2000/svg','linearGradient');gradient.id='v419RepeatingFibSilverGloss';
+        gradient.setAttribute('x1','0%');gradient.setAttribute('y1','0%');gradient.setAttribute('x2','100%');gradient.setAttribute('y2','0%');
+        addStop(doc,gradient,'0%','#758791');addStop(doc,gradient,'18%','#C4D0D6');addStop(doc,gradient,'42%','#FFFFFF');
+        addStop(doc,gradient,'62%','#D6E0E5');addStop(doc,gradient,'82%','#F8FBFC');addStop(doc,gradient,'100%','#758791');defs.appendChild(gradient);
+      }
+    }
+    function createBadge(doc,wheel,id,ratio){
+      var badge=doc.createElementNS('http://www.w3.org/2000/svg','g');badge.id=id;badge.classList.add('v419RepeatingFibonacciBadge');
+      badge.setAttribute('pointer-events','none');badge.setAttribute('data-fibonacci-ratio',ratio);
+      var rect=doc.createElementNS('http://www.w3.org/2000/svg','rect');rect.setAttribute('x','-40');rect.setAttribute('y','-15');
+      rect.setAttribute('width','80');rect.setAttribute('height','30');rect.setAttribute('rx','15');
+      rect.style.setProperty('fill','url(#v419RepeatingFibSilverGloss)','important');rect.style.setProperty('fill-opacity','0.94','important');
+      rect.style.setProperty('stroke','#A67C52','important');rect.style.setProperty('stroke-width','1.4px','important');
+      rect.style.setProperty('filter','drop-shadow(0px 1.2px 1.4px rgba(50,68,78,.36))','important');badge.appendChild(rect);
+      var text=doc.createElementNS('http://www.w3.org/2000/svg','text');text.setAttribute('x','0');text.setAttribute('y','0');
+      text.setAttribute('text-anchor','middle');text.setAttribute('dominant-baseline','central');
+      text.style.setProperty('font-family','Arial, sans-serif','important');text.style.setProperty('font-size','18px','important');
+      text.style.setProperty('font-weight','700','important');text.style.setProperty('fill','#6F4A1F','important');text.textContent=ratio;badge.appendChild(text);
+      wheel.appendChild(badge);return badge;
+    }
+    function position(badge,node){
+      var x=Number(node.getAttribute('x')),y=Number(node.getAttribute('y')),dx=x-CX,dy=y-CY,radius=Math.hypot(dx,dy)||1;
+      var labelX=x-(dx/radius*42),labelY=y-(dy/radius*42),angle=Math.atan2(dy,dx)*180/Math.PI+90;
+      while(angle>90)angle-=180;while(angle<-90)angle+=180;
+      badge.setAttribute('transform','translate('+labelX+' '+labelY+') rotate('+angle.toFixed(3)+')');
+    }
+    function render(){
+      var root=null;try{root=frame.contentDocument;}catch(error){}
+      if(!root)return false;
+      var controlDoc=visit(root,function(doc){return doc.querySelector('input[aria-label="Value"]')?doc:null;},0);
+      var doc=visit(root,function(candidate){return candidate.getElementById('wheel')&&candidate.querySelector('.approved-cycle-number[data-cycle-offset]')?candidate:null;},0);
+      if(!doc)return false;
+      var wheel=doc.getElementById('wheel');ensureGradient(doc,wheel);
+      var valueInput=controlDoc&&controlDoc.querySelector('input[aria-label="Value"]');
+      var places=decimalPlaces(valueInput&&valueInput.value),scale=Math.pow(10,places);
+      var obsolete=doc.querySelectorAll('g[data-v410-fixed-cell],g[data-v409-fibonacci-cell],#v416FibCell94');
+      for(var h=0;h<obsolete.length;h++)obsolete[h].style.setProperty('display','none','important');
+      var existing=doc.querySelectorAll('.v419RepeatingFibonacciBadge');for(var e=0;e<existing.length;e++)existing[e].dataset.v419Seen='false';
+      var master=doc.getElementById('v393FibonacciLabels'),visible=!master||master.style.display!=='none';
+      var nodes=doc.querySelectorAll('.approved-cycle-number[data-cycle-offset]'),count=0;
+      for(var i=0;i<nodes.length;i++){
+        var value=nodeValue(nodes[i]);if(value===null||value<=0)continue;
+        var unit=Math.round(value*scale);if(Math.abs((unit/scale)-value)>1e-7)continue;
+        var remainder=((unit%100)+100)%100,slot=remainder===0?100:remainder,ratio=TEMPLATE[slot];if(!ratio)continue;
+        var key=String(unit).replace('-','m'),id='v419FibUnit'+key;
+        var badge=doc.getElementById(id)||createBadge(doc,wheel,id,ratio);
+        badge.dataset.v419Seen='true';badge.setAttribute('data-v419-unit',String(unit));badge.setAttribute('data-v419-slot',String(slot));
+        position(badge,nodes[i]);badge.style.setProperty('display',visible?'inline':'none','important');
+        badge.style.setProperty('visibility',visible?'visible':'hidden','important');badge.style.setProperty('opacity','1','important');
+        if(badge.parentNode===wheel)wheel.appendChild(badge);count+=1;
+      }
+      existing=doc.querySelectorAll('.v419RepeatingFibonacciBadge[data-v419-seen="false"]');for(var j=0;j<existing.length;j++)existing[j].remove();
+      lastBadgeCount=count;renderCount+=1;
+      doc.documentElement.dataset.v419FibonacciSystem='repeat-template-every-100-to-infinity-by-visible-number';
+      doc.documentElement.dataset.v419FibonacciBadgeCount=String(count);doc.documentElement.dataset.v419FibonacciScale=String(scale);
+      return true;
+    }
+    frame.addEventListener('load',render);
+    var attempts=0;(function boot(){attempts+=1;if(!render()&&attempts<7200)setTimeout(boot,100);}());
+    setInterval(function(){try{render();}catch(error){}},140);
+    window.__auditV419=function(){return{ready:render(),template:TEMPLATE,repeatsEvery:100,repeatsToInfinity:true,
+      example3600:[3611,3614,3623,3627,3638,3650,3661,3672,3678,3688,3694,3700],
+      visibleBadgeCount:lastBadgeCount,renderCount:renderCount,allV418FunctionsPreserved:true};};
+  }());
+  </script>
+</body>
+</html>
