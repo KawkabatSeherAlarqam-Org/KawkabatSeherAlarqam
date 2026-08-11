@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>كوكبة الأرقام السحرية V412 — تلوين يدوي ثابت للخلايا</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}
+    #v411-frame{display:block;width:100%;height:100%;border:0}
+  </style>
+</head>
+<body>
+  <iframe id="v411-frame" title="كوكبة الأرقام السحرية"
+    src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/a9b6bdded6493e16ba9967a1c6e169a43553a0e3/public/kawkabat-al-arqam-al-sihria-v411-universal-wheel-value-engine.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('v411-frame');
+    var STORAGE_KEY='tasi-v412-persistent-manual-cell-colors';
+    var COLORS=['transparent','#FFE45C','#4B5050','#5DBB63','#F16F78'];
+    var OPACITIES=[0.001,0.88,0.82,0.50,0.50];
+    var states=loadStates(),installedLayer=null,installCount=0;
+    function loadStates(){
+      try{var value=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');return value&&typeof value==='object'?value:{};}
+      catch(error){return{};}
+    }
+    function saveStates(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(states));}catch(error){}}
+    function visit(doc,callback,depth){
+      if(!doc||depth>520)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function findWheel(){
+      var root=null;try{root=frame.contentDocument;}catch(error){}
+      if(!root)return null;
+      return visit(root,function(doc){
+        var wheel=doc.getElementById('wheel'),layer=doc.getElementById('v131CellColorLayer');
+        return wheel&&layer&&layer.querySelector('path[data-v131-cell-key]')?wheel:null;
+      },0);
+    }
+    function paint(path,state){
+      path.dataset.state=String(state);
+      path.dataset.v412ManualState=String(state);
+      path.style.setProperty('fill',COLORS[state],'important');
+      path.style.setProperty('fill-opacity',String(OPACITIES[state]),'important');
+      path.style.setProperty('opacity','1','important');
+      path.style.setProperty('cursor','pointer','important');
+      path.style.setProperty('pointer-events','all','important');
+    }
+    function attach(path){
+      var key=path.getAttribute('data-v131-cell-key');if(!key)return;
+      var state=Number(states[key])||0;paint(path,state);
+      path.addEventListener('click',function(event){
+        event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+        var current=Number(states[key])||0;
+        var next=(current+1)%COLORS.length;
+        if(next===0)delete states[key];else states[key]=next;
+        paint(path,next);saveStates();
+      },true);
+      path.addEventListener('contextmenu',function(event){
+        event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+        delete states[key];paint(path,0);saveStates();
+      },true);
+    }
+    function install(){
+      var wheel=findWheel();if(!wheel)return false;
+      var current=wheel.querySelector('#v131CellColorLayer');if(!current)return false;
+      if(current===installedLayer&&current.dataset.v412PersistentManual==='true')return true;
+      var clean=current.cloneNode(true);
+      clean.id='v131CellColorLayer';
+      clean.dataset.v412PersistentManual='true';
+      clean.setAttribute('aria-label','تلوين يدوي ثابت: أصفر ثم رصاصي ثم أخضر ثم أحمر');
+      var paths=clean.querySelectorAll('path[data-v131-cell-key]');
+      for(var i=0;i<paths.length;i++)attach(paths[i]);
+      current.parentNode.replaceChild(clean,current);
+      installedLayer=clean;installCount+=1;
+      wheel.ownerDocument.documentElement.dataset.v412ManualColorOrder='yellow-graphite-green-red-clear';
+      wheel.ownerDocument.documentElement.dataset.v412PersistentColoredCells=String(Object.keys(states).length);
+      return true;
+    }
+    frame.addEventListener('load',install);
+    var attempts=0;(function boot(){attempts+=1;if(!install()&&attempts<7200)setTimeout(boot,100);}());
+    setInterval(function(){try{install();}catch(error){}},180);
+    window.__auditV412=function(){
+      var ready=install();
+      return{ready:ready,colorOrder:['yellow','graphite','green','red','clear'],persistent:true,
+        selectedCellCount:Object.keys(states).length,installCount:installCount,
+        wheelValueEngine:'V411',fibonacciFixedPositions:true};
+    };
+  }());
+  </script>
+</body>
+</html>
