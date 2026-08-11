@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>كوكبة الأرقام السحرية V398 — نسبة 11.8% عند حد خلية 11</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}
+    #v397-frame{display:block;width:100%;height:100%;border:0}
+  </style>
+</head>
+<body>
+  <iframe id="v397-frame" title="كوكبة الأرقام السحرية"
+    src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/775862bf9d6ed5788e93d7c70b988159157fa7f3/public/kawkabat-al-arqam-al-sihria-v397-fibonacci-first-11-8.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('v397-frame');
+    function visit(doc,callback,depth){
+      if(!doc||depth>240)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function renderBadge(){
+      var root=null;try{root=frame.contentDocument;}catch(error){}
+      if(!root)return false;
+      var wheelDoc=visit(root,function(doc){
+        return doc.getElementById('wheel')&&doc.getElementById('v393FibonacciLabels')?doc:null;
+      },0);
+      if(!wheelDoc)return false;
+      var fibGroup=wheelDoc.getElementById('v393FibonacciLabels');
+      var ratio=wheelDoc.getElementById('v393FibCell11');
+      var layer=wheelDoc.getElementById('v398FibonacciBadgeLayer');
+      if(!layer){
+        layer=wheelDoc.createElementNS('http://www.w3.org/2000/svg','g');
+        layer.id='v398FibonacciBadgeLayer';
+        layer.setAttribute('pointer-events','none');
+        fibGroup.parentNode.insertBefore(layer,fibGroup);
+      }
+      layer.style.setProperty('display',fibGroup.style.display==='none'?'none':'inline','important');
+      if(!ratio)return true;
+      var background=wheelDoc.getElementById('v398FibCell11Background');
+      if(!background){
+        background=wheelDoc.createElementNS('http://www.w3.org/2000/svg','rect');
+        background.id='v398FibCell11Background';
+        background.setAttribute('width','72');
+        background.setAttribute('height','30');
+        background.setAttribute('rx','15');
+        background.style.setProperty('fill','#D8C3AF','important');
+        background.style.setProperty('fill-opacity','0.34','important');
+        background.style.setProperty('stroke','#A67C52','important');
+        background.style.setProperty('stroke-width','1.4px','important');
+        layer.appendChild(background);
+      }
+      var x=Number(ratio.getAttribute('x')),y=Number(ratio.getAttribute('y'));
+      if(!Number.isFinite(x)||!Number.isFinite(y))return false;
+      background.setAttribute('x',String(x-36));
+      background.setAttribute('y',String(y-15));
+      background.setAttribute('transform',ratio.getAttribute('transform')||'');
+      ratio.style.setProperty('fill','#6F4A1F','important');
+      ratio.style.setProperty('stroke','none','important');
+      return true;
+    }
+    frame.addEventListener('load',renderBadge);
+    setInterval(function(){try{renderBadge();}catch(error){}},100);
+    window.__auditV398FibonacciBadge=function(){
+      return{ready:renderBadge(),ratio:'11.8%',cell:11,position:'inner-border',geometryChanged:false};
+    };
+  }());
+  </script>
+</body>
+</html>
