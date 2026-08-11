@@ -9172,8 +9172,8 @@ function bindCopy(root){
   copyButton=button;
   button.setAttribute('role','button');
   button.setAttribute('tabindex','0');
-  button.setAttribute('title','Copy / Export wheel image');
-  button.setAttribute('aria-label','Copy or export wheel image');
+  button.setAttribute('title','Download wheel image');
+  button.setAttribute('aria-label','Download wheel image');
   button.style.setProperty('cursor','pointer','important');
   button.style.setProperty('pointer-events','auto','important');
   if(button.dataset.v355CopyBound==='true')return true;
@@ -9282,7 +9282,7 @@ function install(){
   copyButton.setAttribute('data-v356-document-capture-copy','true');
   copyButton.setAttribute('role','button');
   copyButton.setAttribute('tabindex','0');
-  copyButton.setAttribute('aria-label','Copy or export wheel image');
+  copyButton.setAttribute('aria-label','Download wheel image');
   copyButton.style.setProperty('cursor','pointer','important');
   copyButton.style.setProperty('pointer-events','auto','important');
   if(panelDoc.documentElement.dataset.v356CopyCaptureBound!=='true'){
@@ -10275,8 +10275,8 @@ function visit(doc,depth){
           copy.dataset.v385ClipboardBound='true';
           copy.setAttribute('role','button');
           copy.setAttribute('tabindex','0');
-          copy.setAttribute('aria-label','Copy wheel to clipboard');
-          copy.setAttribute('title','Copy wheel to clipboard');
+          copy.setAttribute('aria-label','Download wheel image');
+          copy.setAttribute('title','Download wheel image');
           copy.style.pointerEvents='auto';
           copy.style.cursor='pointer';
           function run(event){
