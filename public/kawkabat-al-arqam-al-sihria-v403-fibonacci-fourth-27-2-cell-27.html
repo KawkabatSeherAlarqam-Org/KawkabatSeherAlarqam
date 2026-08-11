@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>كوكبة الأرقام السحرية V403 — النسبة الرابعة 27.2% داخل خلية 27</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}
+    #v402-frame{display:block;width:100%;height:100%;border:0}
+  </style>
+</head>
+<body>
+  <iframe id="v402-frame" title="كوكبة الأرقام السحرية"
+    src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/1a7f05d9b98c921b8d7c65c852f89d733e9f04cc/public/kawkabat-al-arqam-al-sihria-v402-fibonacci-third-23-6-cell-23.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('v402-frame');
+    function visit(doc,callback,depth){
+      if(!doc||depth>320)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function exactNumberText(node){
+      var primary=node.querySelector('tspan[data-v131-number-role="primary"]');
+      return String(primary?primary.textContent:node.textContent||'').trim();
+    }
+    function cellValue(node){
+      var values=[node.getAttribute('data-v131-display-value'),node.getAttribute('data-tick'),exactNumberText(node)];
+      for(var i=0;i<values.length;i++){
+        var value=String(values[i]==null?'':values[i]).replace(/,/g,'').trim();
+        if(/^[-+]?[0-9]+(?:\.[0-9]+)?$/.test(value))return Number(value);
+      }
+      return null;
+    }
+    function locateCell(doc,target){
+      var nodes=doc.querySelectorAll('.approved-cycle-number');
+      for(var i=0;i<nodes.length;i++){
+        var node=nodes[i];
+        if(cellValue(node)!==target)continue;
+        var x=Number(node.getAttribute('x')),y=Number(node.getAttribute('y'));
+        if(Number.isFinite(x)&&Number.isFinite(y))return node;
+      }
+      return null;
+    }
+    function render(){
+      var root=null;try{root=frame.contentDocument;}catch(error){}
+      if(!root)return false;
+      var wheelDoc=visit(root,function(doc){
+        return doc.getElementById('wheel')&&doc.getElementById('v393FibonacciLabels')?doc:null;
+      },0);
+      if(!wheelDoc)return false;
+      var wheel=wheelDoc.getElementById('wheel');
+      var firstLayer=wheelDoc.getElementById('v393FibonacciLabels');
+      var cell=locateCell(wheelDoc,27);
+      if(!cell)return false;
+      var badge=wheelDoc.getElementById('v403FibCell27');
+      if(!badge){
+        badge=wheelDoc.createElementNS('http://www.w3.org/2000/svg','g');
+        badge.id='v403FibCell27';
+        badge.setAttribute('pointer-events','none');
+        badge.setAttribute('data-fibonacci-cell','27');
+        var background=wheelDoc.createElementNS('http://www.w3.org/2000/svg','rect');
+        background.setAttribute('x','-36');
+        background.setAttribute('y','-15');
+        background.setAttribute('width','72');
+        background.setAttribute('height','30');
+        background.setAttribute('rx','15');
+        background.style.setProperty('fill','#D8C3AF','important');
+        background.style.setProperty('fill-opacity','0.34','important');
+        background.style.setProperty('stroke','#A67C52','important');
+        background.style.setProperty('stroke-width','1.4px','important');
+        badge.appendChild(background);
+        var label=wheelDoc.createElementNS('http://www.w3.org/2000/svg','text');
+        label.setAttribute('x','0');
+        label.setAttribute('y','0');
+        label.setAttribute('text-anchor','middle');
+        label.setAttribute('dominant-baseline','central');
+        label.style.setProperty('font-family','Arial, sans-serif','important');
+        label.style.setProperty('font-size','20px','important');
+        label.style.setProperty('font-weight','700','important');
+        label.style.setProperty('fill','#6F4A1F','important');
+        label.textContent='27.2%';
+        badge.appendChild(label);
+        wheel.appendChild(badge);
+      }
+      var x=Number(cell.getAttribute('x')),y=Number(cell.getAttribute('y'));
+      var dx=x-2200,dy=y-1800;
+      var radius=Math.hypot(dx,dy)||1;
+      var labelX=x-(dx/radius*42),labelY=y-(dy/radius*42);
+      var tangentAngle=Math.atan2(dy,dx)*180/Math.PI+90;
+      while(tangentAngle>90)tangentAngle-=180;
+      while(tangentAngle<-90)tangentAngle+=180;
+      badge.setAttribute('transform','translate('+labelX+' '+labelY+') rotate('+tangentAngle.toFixed(3)+')');
+      badge.style.setProperty('display',firstLayer.style.display==='none'?'none':'inline','important');
+      wheelDoc.documentElement.dataset.v403FibonacciRatios='11.8%,14.6%,23.6%,27.2%';
+      return true;
+    }
+    frame.addEventListener('load',render);
+    var attempts=0;
+    (function boot(){attempts+=1;if(!render()&&attempts<7200)setTimeout(boot,100);}());
+    setInterval(function(){try{render();}catch(error){}},250);
+    window.__auditV403=function(){return{ready:render(),ratioCount:4,fourthRatio:'27.2%',fourthCell:27};};
+  }());
+  </script>
+</body>
+</html>
