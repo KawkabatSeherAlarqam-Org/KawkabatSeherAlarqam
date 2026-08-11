@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>كوكبة الأرقام السحرية V408 — إضافة 87.6% وتوحيد التظليل الفضي</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}
+    #v407-frame{display:block;width:100%;height:100%;border:0}
+  </style>
+</head>
+<body>
+  <iframe id="v407-frame" title="كوكبة الأرقام السحرية"
+    src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/7f302fec8c8bd7ebbc0ddaefe09e59b40b376ed8/public/kawkabat-al-arqam-al-sihria-v407-first-11-8-polished-silver-gloss.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('v407-frame');
+    function visit(doc,callback,depth){
+      if(!doc||depth>440)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function exactNumberText(node){
+      var primary=node.querySelector('tspan[data-v131-number-role="primary"]');
+      return String(primary?primary.textContent:node.textContent||'').trim();
+    }
+    function cellValue(node){
+      var values=[node.getAttribute('data-v131-display-value'),node.getAttribute('data-tick'),exactNumberText(node)];
+      for(var i=0;i<values.length;i++){
+        var value=String(values[i]==null?'':values[i]).replace(/,/g,'').trim();
+        if(/^[-+]?[0-9]+(?:\.[0-9]+)?$/.test(value))return Number(value);
+      }
+      return null;
+    }
+    function locateCell(doc,target){
+      var nodes=doc.querySelectorAll('.approved-cycle-number');
+      for(var i=0;i<nodes.length;i++){
+        var node=nodes[i];
+        if(cellValue(node)!==target)continue;
+        var x=Number(node.getAttribute('x')),y=Number(node.getAttribute('y'));
+        if(Number.isFinite(x)&&Number.isFinite(y))return node;
+      }
+      return null;
+    }
+    function addStop(doc,gradient,offset,color){
+      var stop=doc.createElementNS('http://www.w3.org/2000/svg','stop');
+      stop.setAttribute('offset',offset);stop.setAttribute('stop-color',color);gradient.appendChild(stop);
+    }
+    function ensureGradient(doc,svg){
+      var defs=svg.querySelector('defs');
+      if(!defs){defs=doc.createElementNS('http://www.w3.org/2000/svg','defs');svg.insertBefore(defs,svg.firstChild);}
+      var gradient=doc.getElementById('v408AllRatiosSilverGloss');
+      if(!gradient){
+        gradient=doc.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+        gradient.id='v408AllRatiosSilverGloss';
+        gradient.setAttribute('x1','0%');gradient.setAttribute('y1','0%');
+        gradient.setAttribute('x2','100%');gradient.setAttribute('y2','0%');
+        addStop(doc,gradient,'0%','#7F909B');addStop(doc,gradient,'16%','#BCC9D0');
+        addStop(doc,gradient,'34%','#EEF4F7');addStop(doc,gradient,'46%','#FFFFFF');
+        addStop(doc,gradient,'55%','#D6E0E5');addStop(doc,gradient,'70%','#F8FBFC');
+        addStop(doc,gradient,'84%','#B7C4CB');addStop(doc,gradient,'100%','#758791');
+        defs.appendChild(gradient);
+      }
+    }
+    function createBadge(doc,wheel){
+      var badge=doc.createElementNS('http://www.w3.org/2000/svg','g');
+      badge.id='v408FibCell87';badge.setAttribute('pointer-events','none');
+      badge.setAttribute('data-fibonacci-cell','87');badge.setAttribute('data-fibonacci-ratio','87.6%');
+      var background=doc.createElementNS('http://www.w3.org/2000/svg','rect');
+      background.setAttribute('x','-36');background.setAttribute('y','-15');
+      background.setAttribute('width','72');background.setAttribute('height','30');background.setAttribute('rx','15');
+      background.style.setProperty('stroke','#A67C52','important');
+      background.style.setProperty('stroke-width','1.4px','important');badge.appendChild(background);
+      var label=doc.createElementNS('http://www.w3.org/2000/svg','text');
+      label.setAttribute('x','0');label.setAttribute('y','0');label.setAttribute('text-anchor','middle');
+      label.setAttribute('dominant-baseline','central');label.style.setProperty('font-family','Arial, sans-serif','important');
+      label.style.setProperty('font-size','20px','important');label.style.setProperty('font-weight','700','important');
+      label.style.setProperty('fill','#6F4A1F','important');label.textContent='87.6%';badge.appendChild(label);
+      wheel.appendChild(badge);return badge;
+    }
+    function positionBadge(badge,cell){
+      var x=Number(cell.getAttribute('x')),y=Number(cell.getAttribute('y'));
+      var dx=x-2200,dy=y-1800,radius=Math.hypot(dx,dy)||1;
+      var labelX=x-(dx/radius*42),labelY=y-(dy/radius*42);
+      var angle=Math.atan2(dy,dx)*180/Math.PI+90;
+      while(angle>90)angle-=180;while(angle<-90)angle+=180;
+      badge.setAttribute('transform','translate('+labelX+' '+labelY+') rotate('+angle.toFixed(3)+')');
+    }
+    function render(){
+      var root=null;try{root=frame.contentDocument;}catch(error){}
+      if(!root)return false;
+      var wheelDoc=visit(root,function(doc){
+        return doc.getElementById('wheel')&&doc.getElementById('v393FibonacciLabels')?doc:null;
+      },0);
+      if(!wheelDoc)return false;
+      var wheel=wheelDoc.getElementById('wheel');
+      ensureGradient(wheelDoc,wheel);
+      var cell=locateCell(wheelDoc,87),badge=wheelDoc.getElementById('v408FibCell87');
+      if(cell){if(!badge)badge=createBadge(wheelDoc,wheel);positionBadge(badge,cell);}
+      var visible=wheelDoc.getElementById('v393FibonacciLabels').style.display!=='none';
+      if(badge)badge.style.setProperty('display',cell&&visible?'inline':'none','important');
+      var backgrounds=Array.prototype.slice.call(wheelDoc.querySelectorAll('g[data-fibonacci-cell] rect'));
+      var first=wheelDoc.getElementById('v398FibCell11Background');
+      if(first&&backgrounds.indexOf(first)===-1)backgrounds.push(first);
+      for(var i=0;i<backgrounds.length;i++){
+        backgrounds[i].style.setProperty('fill','url(#v408AllRatiosSilverGloss)','important');
+        backgrounds[i].style.setProperty('fill-opacity','0.94','important');
+        backgrounds[i].style.setProperty('filter','drop-shadow(0px 1.2px 1.4px rgba(50,68,78,.36))','important');
+        backgrounds[i].setAttribute('data-v408-all-silver','true');
+      }
+      wheelDoc.documentElement.dataset.v408FibonacciRatioCount='23';
+      wheelDoc.documentElement.dataset.v408FibonacciShading='all-polished-silver';
+      return true;
+    }
+    frame.addEventListener('load',render);
+    var attempts=0;
+    (function boot(){attempts+=1;if(!render()&&attempts<7200)setTimeout(boot,100);}());
+    setInterval(function(){try{render();}catch(error){}},80);
+    window.__auditV408=function(){return{ready:render(),ratioCount:23,addedRatio:'87.6%',addedCell:87,allSilver:true};};
+  }());
+  </script>
+</body>
+</html>
