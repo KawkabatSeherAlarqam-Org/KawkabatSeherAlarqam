@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>كوكبة الأرقام السحرية V405 — جميع نسب فيبوناتشي المعتمدة</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}
+    #v404-frame{display:block;width:100%;height:100%;border:0}
+  </style>
+</head>
+<body>
+  <iframe id="v404-frame" title="كوكبة الأرقام السحرية"
+    src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/ac4a35ac899fd04dbcb0871c63a9a53d4b2f498e/public/kawkabat-al-arqam-al-sihria-v404-fibonacci-fifth-38-2-cell-38.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('v404-frame');
+    var REMAINING_RATIOS=[
+      [50,'50%'],[61,'61.8%'],[72,'72.8%'],[78,'78.6%'],[88,'88.2%'],
+      [100,'100%'],[113,'113%'],[127,'127.2%'],[138,'138.2%'],[141,'141.4%'],
+      [150,'150%'],[161,'161.8%'],[172,'172.8%'],[200,'200%'],
+      [261,'261.8%'],[361,'361.8%'],[423,'423.6%']
+    ];
+    var ALL_RATIOS=['11.8%','14.6%','23.6%','27.2%','38.2%','50%','61.8%','72.8%','78.6%','88.2%','100%','113%','127.2%','138.2%','141.4%','150%','161.8%','172.8%','200%','261.8%','361.8%','423.6%'];
+    function visit(doc,callback,depth){
+      if(!doc||depth>360)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function exactNumberText(node){
+      var primary=node.querySelector('tspan[data-v131-number-role="primary"]');
+      return String(primary?primary.textContent:node.textContent||'').trim();
+    }
+    function cellValue(node){
+      var values=[node.getAttribute('data-v131-display-value'),node.getAttribute('data-tick'),exactNumberText(node)];
+      for(var i=0;i<values.length;i++){
+        var value=String(values[i]==null?'':values[i]).replace(/,/g,'').trim();
+        if(/^[-+]?[0-9]+(?:\.[0-9]+)?$/.test(value))return Number(value);
+      }
+      return null;
+    }
+    function locateCell(doc,target){
+      var nodes=doc.querySelectorAll('.approved-cycle-number');
+      for(var i=0;i<nodes.length;i++){
+        var node=nodes[i];
+        if(cellValue(node)!==target)continue;
+        var x=Number(node.getAttribute('x')),y=Number(node.getAttribute('y'));
+        if(Number.isFinite(x)&&Number.isFinite(y))return node;
+      }
+      return null;
+    }
+    function createBadge(doc,wheel,target,ratio){
+      var badge=doc.createElementNS('http://www.w3.org/2000/svg','g');
+      badge.id='v405FibCell'+target;
+      badge.setAttribute('pointer-events','none');
+      badge.setAttribute('data-fibonacci-cell',String(target));
+      badge.setAttribute('data-fibonacci-ratio',ratio);
+      var background=doc.createElementNS('http://www.w3.org/2000/svg','rect');
+      background.setAttribute('x','-36');
+      background.setAttribute('y','-15');
+      background.setAttribute('width','72');
+      background.setAttribute('height','30');
+      background.setAttribute('rx','15');
+      background.style.setProperty('fill','#D8C3AF','important');
+      background.style.setProperty('fill-opacity','0.34','important');
+      background.style.setProperty('stroke','#A67C52','important');
+      background.style.setProperty('stroke-width','1.4px','important');
+      badge.appendChild(background);
+      var label=doc.createElementNS('http://www.w3.org/2000/svg','text');
+      label.setAttribute('x','0');
+      label.setAttribute('y','0');
+      label.setAttribute('text-anchor','middle');
+      label.setAttribute('dominant-baseline','central');
+      label.style.setProperty('font-family','Arial, sans-serif','important');
+      label.style.setProperty('font-size','20px','important');
+      label.style.setProperty('font-weight','700','important');
+      label.style.setProperty('fill','#6F4A1F','important');
+      label.textContent=ratio;
+      badge.appendChild(label);
+      wheel.appendChild(badge);
+      return badge;
+    }
+    function positionBadge(badge,cell){
+      var x=Number(cell.getAttribute('x')),y=Number(cell.getAttribute('y'));
+      var dx=x-2200,dy=y-1800;
+      var radius=Math.hypot(dx,dy)||1;
+      var labelX=x-(dx/radius*42),labelY=y-(dy/radius*42);
+      var tangentAngle=Math.atan2(dy,dx)*180/Math.PI+90;
+      while(tangentAngle>90)tangentAngle-=180;
+      while(tangentAngle<-90)tangentAngle+=180;
+      badge.setAttribute('transform','translate('+labelX+' '+labelY+') rotate('+tangentAngle.toFixed(3)+')');
+    }
+    function render(){
+      var root=null;try{root=frame.contentDocument;}catch(error){}
+      if(!root)return false;
+      var wheelDoc=visit(root,function(doc){
+        return doc.getElementById('wheel')&&doc.getElementById('v393FibonacciLabels')?doc:null;
+      },0);
+      if(!wheelDoc)return false;
+      var wheel=wheelDoc.getElementById('wheel');
+      var firstLayer=wheelDoc.getElementById('v393FibonacciLabels');
+      var visible=firstLayer.style.display!=='none';
+      var rendered=5;
+      for(var i=0;i<REMAINING_RATIOS.length;i++){
+        var target=REMAINING_RATIOS[i][0],ratio=REMAINING_RATIOS[i][1];
+        var cell=locateCell(wheelDoc,target);
+        var badge=wheelDoc.getElementById('v405FibCell'+target);
+        if(!cell){if(badge)badge.style.setProperty('display','none','important');continue;}
+        if(!badge)badge=createBadge(wheelDoc,wheel,target,ratio);
+        positionBadge(badge,cell);
+        badge.style.setProperty('display',visible?'inline':'none','important');
+        rendered+=1;
+      }
+      wheelDoc.documentElement.dataset.v405FibonacciRatioCount='22';
+      wheelDoc.documentElement.dataset.v405FibonacciRenderedCount=String(rendered);
+      wheelDoc.documentElement.dataset.v405FibonacciRatios=ALL_RATIOS.join(',');
+      return true;
+    }
+    frame.addEventListener('load',render);
+    var attempts=0;
+    (function boot(){attempts+=1;if(!render()&&attempts<7200)setTimeout(boot,100);}());
+    setInterval(function(){try{render();}catch(error){}},250);
+    window.__auditV405=function(){return{ready:render(),ratioCount:22,remainingAdded:17,ratios:ALL_RATIOS.slice()};};
+  }());
+  </script>
+</body>
+</html>
