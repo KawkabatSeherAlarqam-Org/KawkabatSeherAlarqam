@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>كوكبة الأرقام السحرية V407 — تظليل فضي لامع للنسبة الأولى</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}
+    #v406-frame{display:block;width:100%;height:100%;border:0}
+  </style>
+</head>
+<body>
+  <iframe id="v406-frame" title="كوكبة الأرقام السحرية"
+    src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/48010e31ce8e44017e6d7214a13a9b9e7e77ff0b/public/kawkabat-al-arqam-al-sihria-v406-first-11-8-silver-shading-only.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('v406-frame');
+    function visit(doc,callback,depth){
+      if(!doc||depth>400)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function addStop(doc,gradient,offset,color,opacity){
+      var stop=doc.createElementNS('http://www.w3.org/2000/svg','stop');
+      stop.setAttribute('offset',offset);
+      stop.setAttribute('stop-color',color);
+      stop.setAttribute('stop-opacity',opacity);
+      gradient.appendChild(stop);
+    }
+    function ensureGradient(doc,background){
+      var svg=background.ownerSVGElement;
+      if(!svg)return false;
+      var defs=svg.querySelector('defs');
+      if(!defs){
+        defs=doc.createElementNS('http://www.w3.org/2000/svg','defs');
+        svg.insertBefore(defs,svg.firstChild);
+      }
+      var gradient=doc.getElementById('v407PolishedSilverGloss');
+      if(!gradient){
+        gradient=doc.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+        gradient.id='v407PolishedSilverGloss';
+        gradient.setAttribute('x1','0%');
+        gradient.setAttribute('y1','0%');
+        gradient.setAttribute('x2','100%');
+        gradient.setAttribute('y2','0%');
+        addStop(doc,gradient,'0%','#7F909B','1');
+        addStop(doc,gradient,'16%','#BCC9D0','1');
+        addStop(doc,gradient,'34%','#EEF4F7','1');
+        addStop(doc,gradient,'46%','#FFFFFF','1');
+        addStop(doc,gradient,'55%','#D6E0E5','1');
+        addStop(doc,gradient,'70%','#F8FBFC','1');
+        addStop(doc,gradient,'84%','#B7C4CB','1');
+        addStop(doc,gradient,'100%','#758791','1');
+        defs.appendChild(gradient);
+      }
+      return true;
+    }
+    function applyGloss(){
+      var root=null;try{root=frame.contentDocument;}catch(error){}
+      if(!root)return false;
+      var wheelDoc=visit(root,function(doc){return doc.getElementById('v398FibCell11Background')?doc:null;},0);
+      if(!wheelDoc)return false;
+      var background=wheelDoc.getElementById('v398FibCell11Background');
+      if(!ensureGradient(wheelDoc,background))return false;
+      background.style.setProperty('fill','url(#v407PolishedSilverGloss)','important');
+      background.style.setProperty('fill-opacity','0.94','important');
+      background.style.setProperty('filter','drop-shadow(0px 1.2px 1.4px rgba(50,68,78,.36))','important');
+      background.setAttribute('data-v407-polished-silver-gloss','true');
+      wheelDoc.documentElement.dataset.v407FirstRatioShading='polished-silver-gloss';
+      return true;
+    }
+    frame.addEventListener('load',applyGloss);
+    var attempts=0;
+    (function boot(){attempts+=1;if(!applyGloss()&&attempts<7200)setTimeout(boot,100);}());
+    setInterval(function(){try{applyGloss();}catch(error){}},100);
+    window.__auditV407=function(){return{ready:applyGloss(),ratio:'11.8%',silverGloss:true,geometryChanged:false};};
+  }());
+  </script>
+</body>
+</html>
