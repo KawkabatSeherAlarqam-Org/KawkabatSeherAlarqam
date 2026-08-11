@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>كوكبة الأرقام السحرية V411 — محرك جذري شامل لقيمة العجلة</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}
+    #v410-frame{display:block;width:100%;height:100%;border:0}
+  </style>
+</head>
+<body>
+  <iframe id="v410-frame" title="كوكبة الأرقام السحرية"
+    src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/266c9df8e4cafb0ea0dd6c33f1e3f07759174bf2/public/kawkabat-al-arqam-al-sihria-v410-fibonacci-fixed-cells-any-wheel-value.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('v410-frame');
+    var CX=2200,CY=1800,DIVISIONS=36;
+    var valueInput=null,incrementInput=null,wheelDoc=null,lastSignature='',applyCount=0;
+    function visit(doc,callback,depth){
+      if(!doc||depth>480)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function normalize(value){
+      var text=String(value==null?'':value)
+        .replace(/[٠-٩]/g,function(d){return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d));})
+        .replace(/[۰-۹]/g,function(d){return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d));})
+        .replace(/,/g,'').trim();
+      var number=Number(text);return Number.isFinite(number)&&number>0?number:null;
+    }
+    function decimals(value){
+      var text=String(value).toLowerCase();
+      if(text.indexOf('e-')!==-1)return Math.min(8,Number(text.split('e-')[1])||0);
+      var dot=text.indexOf('.');return dot===-1?0:Math.min(8,text.length-dot-1);
+    }
+    function format(value,places){
+      var factor=Math.pow(10,places);
+      var rounded=Math.round((value+Number.EPSILON)*factor)/factor;
+      return places?rounded.toFixed(places).replace(/\.?0+$/,''):String(Math.round(rounded));
+    }
+    function positiveModulo(value,modulus){return((value%modulus)+modulus)%modulus;}
+    function cellPosition(node){
+      var x=Number(node.getAttribute('x')),y=Number(node.getAttribute('y'));
+      if(!Number.isFinite(x)||!Number.isFinite(y))return null;
+      var angle=Math.atan2(y-CY,x-CX)*180/Math.PI;
+      var raw=(angle+90)/(360/DIVISIONS);
+      var clockwise=wheelDoc.documentElement.dataset.layoutDirection!=='counterclockwise';
+      var index=positiveModulo(Math.round(clockwise?raw:-raw),DIVISIONS);
+      return index===0?DIVISIONS:index;
+    }
+    function writeNode(node,text){
+      node.setAttribute('data-v131-display-value',text);
+      node.setAttribute('data-v411-universal-value','true');
+      node.removeAttribute('data-v131-number-render-state');
+      var primary=node.querySelector('tspan[data-v131-number-role="primary"]');
+      if(primary){if(primary.textContent!==text)primary.textContent=text;}
+      else if(node.textContent!==text)node.textContent=text;
+    }
+    function applyValue(force){
+      if(!wheelDoc||!valueInput||!incrementInput)return false;
+      var requested=normalize(valueInput.value),increment=normalize(incrementInput.value);
+      if(requested===null)return false;
+      if(increment===null)increment=1;
+      var nodes=wheelDoc.querySelectorAll('.approved-cycle-number[data-cycle-offset]');
+      if(!nodes.length)return false;
+      var mode=requested<DIVISIONS?'cell-unit':'anchor-end';
+      var places=mode==='cell-unit'?Math.max(decimals(requested),2):Math.max(decimals(requested),decimals(increment));
+      var signature=[requested,increment,mode,nodes.length].join('|');
+      if(!force&&signature===lastSignature&&wheelDoc.documentElement.dataset.v411Stable==='true')return true;
+      var updated=0,minValue=null,maxValue=null;
+      nodes.forEach(function(node){
+        var offset=Number.parseInt(node.getAttribute('data-cycle-offset'),10);
+        var position=cellPosition(node);
+        if(!Number.isFinite(offset)||position===null)return;
+        var ordinal=(offset*DIVISIONS)+position;
+        var value=mode==='cell-unit'?requested*ordinal:requested-(35*increment)+((ordinal-1)*increment);
+        var text=format(value,places);
+        if(node.getAttribute('data-v131-display-value')!==text)updated+=1;
+        writeNode(node,text);
+        if(minValue===null||value<minValue)minValue=value;
+        if(maxValue===null||value>maxValue)maxValue=value;
+      });
+      lastSignature=signature;applyCount+=1;
+      var root=wheelDoc.documentElement;
+      root.dataset.v411Stable='true';root.dataset.v411Mode=mode;
+      root.dataset.v411RequestedValue=String(requested);root.dataset.v411Increment=String(increment);
+      root.dataset.v411Minimum=String(minValue);root.dataset.v411Maximum=String(maxValue);
+      root.dataset.v411Updated=String(updated);root.dataset.v411ApplyCount=String(applyCount);
+      return true;
+    }
+    function schedule(){
+      lastSignature='';
+      [0,30,80,160,320,650,1000].forEach(function(delay){setTimeout(function(){try{applyValue(true);}catch(error){}},delay);});
+    }
+    function bind(){
+      var root=null;try{root=frame.contentDocument;}catch(error){}
+      if(!root)return false;
+      var controlDoc=visit(root,function(doc){
+        return doc.querySelector('input[aria-label="Value"]')&&doc.querySelector('input[aria-label="Increment"]')?doc:null;
+      },0);
+      wheelDoc=visit(root,function(doc){return doc.getElementById('wheel')&&doc.querySelector('.approved-cycle-number[data-cycle-offset]')?doc:null;},0);
+      if(!controlDoc||!wheelDoc)return false;
+      var nextValue=controlDoc.querySelector('input[aria-label="Value"]');
+      var nextIncrement=controlDoc.querySelector('input[aria-label="Increment"]');
+      if(nextValue!==valueInput){
+        valueInput=nextValue;valueInput.readOnly=false;valueInput.removeAttribute('readonly');
+        valueInput.setAttribute('aria-readonly','false');valueInput.title='Any positive wheel value, including 0.01';
+        ['input','change','keyup','blur'].forEach(function(name){valueInput.addEventListener(name,schedule,true);});
+      }
+      if(nextIncrement!==incrementInput){
+        incrementInput=nextIncrement;
+        ['input','change','keyup','blur'].forEach(function(name){incrementInput.addEventListener(name,schedule,true);});
+      }
+      applyValue(false);return true;
+    }
+    frame.addEventListener('load',bind);
+    var attempts=0;(function boot(){attempts+=1;if(!bind()&&attempts<7200)setTimeout(boot,100);}());
+    setInterval(function(){try{bind();applyValue(true);}catch(error){}},120);
+    window.__auditV411=function(){
+      var root=wheelDoc&&wheelDoc.documentElement;
+      return{ready:bind()&&applyValue(true),value:valueInput&&valueInput.value,increment:incrementInput&&incrementInput.value,
+        mode:root&&root.dataset.v411Mode,minimum:root&&root.dataset.v411Minimum,maximum:root&&root.dataset.v411Maximum,
+        supports:[0.01,0.1,1,3960,10440],fibonacciFixedPositions:true,applyCount:applyCount};
+    };
+  }());
+  </script>
+</body>
+</html>
