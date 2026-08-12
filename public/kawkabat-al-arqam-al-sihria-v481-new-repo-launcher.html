@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>كوكبة الأرقام السحرية V481</title>
+<style>
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}
+#rootFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="rootFrame" title="كوكبة الأرقام السحرية" allowfullscreen src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-al-arqam-al-sihria-v481-rebuilt-wheel-zoom-controls.html"></iframe>
+<script>
+(function(){
+'use strict';
+var replacements=[
+  ['github.com/saloqbi/TasiGanzilla','github.com/saloqbi/KawkabatSeherAlarqam'],
+  ['raw.githubusercontent.com/saloqbi/TasiGanzilla','raw.githubusercontent.com/saloqbi/KawkabatSeherAlarqam'],
+  ['cdn.jsdelivr.net/gh/saloqbi/TasiGanzilla','cdn.jsdelivr.net/gh/saloqbi/KawkabatSeherAlarqam']
+];
+var visited=new WeakSet();
+function rewrite(value){
+  var out=String(value||'');
+  for(var i=0;i<replacements.length;i++) out=out.split(replacements[i][0]).join(replacements[i][1]);
+  return out;
+}
+function repairAttribute(node,name){
+  var oldValue=node.getAttribute(name);
+  if(!oldValue)return;
+  var newValue=rewrite(oldValue);
+  if(newValue!==oldValue)node.setAttribute(name,newValue);
+}
+function repairScripts(doc){
+  var scripts=doc.querySelectorAll('script[src]');
+  for(var i=0;i<scripts.length;i++){
+    var script=scripts[i],oldSrc=script.getAttribute('src')||'',newSrc=rewrite(oldSrc);
+    if(newSrc===oldSrc)continue;
+    if(script.dataset.kawkabatRepoReplacement==='done')continue;
+    script.dataset.kawkabatRepoReplacement='done';
+    var replacement=doc.createElement('script');
+    replacement.src=newSrc;
+    replacement.async=script.async;
+    replacement.defer=script.defer;
+    replacement.dataset.kawkabatRepoReplacement='replacement';
+    (script.parentNode||doc.head||doc.documentElement).appendChild(replacement);
+  }
+}
+function installObserver(doc){
+  if(visited.has(doc))return;
+  visited.add(doc);
+  try{
+    new MutationObserver(function(){repairDoc(doc,0);}).observe(doc.documentElement||doc,{subtree:true,childList:true,attributes:true,attributeFilter:['src','href']});
+  }catch(error){}
+}
+function repairDoc(doc,depth){
+  if(!doc||depth>80)return;
+  installObserver(doc);
+  try{
+    var nodes=doc.querySelectorAll('iframe[src],img[src],source[src],video[src],audio[src],link[href],a[href]');
+    for(var i=0;i<nodes.length;i++){
+      if(nodes[i].hasAttribute('src'))repairAttribute(nodes[i],'src');
+      if(nodes[i].hasAttribute('href'))repairAttribute(nodes[i],'href');
+    }
+    repairScripts(doc);
+    var frames=doc.querySelectorAll('iframe');
+    for(var j=0;j<frames.length;j++){
+      try{if(frames[j].contentDocument)repairDoc(frames[j].contentDocument,depth+1);}catch(error){}
+    }
+  }catch(error){}
+}
+var root=document.getElementById('rootFrame');
+root.addEventListener('load',function(){try{repairDoc(document,0);}catch(error){}});
+setInterval(function(){try{repairDoc(document,0);}catch(error){}},100);
+window.__kawkabatRepoRepair={rewrite:rewrite,repair:function(){repairDoc(document,0);return true;}};
+}());
+</script>
+</body>
+</html>
