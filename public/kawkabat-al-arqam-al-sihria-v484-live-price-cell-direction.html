@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>كوكبة الأرقام السحرية V483 — زر LIVE نظيف</title>
+<style>html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}#wheelFrame{display:block;width:100%;height:100%;border:0}</style>
+</head>
+<body>
+<iframe id="wheelFrame" title="كوكبة الأرقام السحرية" src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/61810e76ef6b576936fcdfd3ccd04ee4ece1bff1/public/kawkabat-al-arqam-al-sihria-v482-amibroker-live-phone-toggle.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('wheelFrame'),live=false,lastManual=null,lastPrice=null,cleanButton=null,rebuildCount=0,applyCount=0;
+function visit(doc,fn,depth){
+ if(!doc||depth>800)return null;
+ var hit=fn(doc);if(hit)return hit;
+ var fs=doc.querySelectorAll('iframe');
+ for(var i=0;i<fs.length;i++){try{var x=visit(fs[i].contentDocument,fn,depth+1);if(x)return x;}catch(e){}}
+ return null;
+}
+function root(){try{return frame.contentDocument;}catch(e){return null;}}
+function findControlDoc(){var r=root();return r&&visit(r,function(d){return d.querySelector('input[aria-label="Value"]')?d:null;},0);}
+function findOldButton(){
+ var r=root();return r&&visit(r,function(d){
+  var b=d.getElementById('v62ConnectionBtn');if(b)return b;
+  var all=d.querySelectorAll('button,[role="button"]');
+  for(var i=0;i<all.length;i++){var k=(all[i].id||'')+' '+(all[i].title||'')+' '+(all[i].getAttribute('aria-label')||'');if(/Connection settings|إعدادات الاتصال|XAUUSD (LIVE|MANUAL)/i.test(k))return all[i];}
+  return null;
+ },0);
+}
+function removeModals(){
+ var r=root();if(!r)return;
+ visit(r,function(d){
+  var list=d.querySelectorAll('#v62ConnectionModal,[aria-label="Connection settings dialog"],[role="dialog"]');
+  for(var i=0;i<list.length;i++){var t=(list[i].textContent||'')+' '+(list[i].getAttribute('aria-label')||'');if(/Connection settings|Use proxy|إعدادات الاتصال/i.test(t)){list[i].remove();}}
+  return null;
+ },0);
+}
+function nativeSet(input,value){
+ var w=input.ownerDocument.defaultView,p=w.HTMLInputElement&&w.HTMLInputElement.prototype,ds=p&&Object.getOwnPropertyDescriptor(p,'value');
+ if(ds&&ds.set)ds.set.call(input,value);else input.value=value;
+ ['input','change','keyup','blur'].forEach(function(n){input.dispatchEvent(new w.Event(n,{bubbles:true}));});
+}
+function setValue(price){
+ var d=findControlDoc(),input=d&&d.querySelector('input[aria-label="Value"]');if(!input)return false;
+ var value=Number(price).toFixed(2);if(input.value!==value)nativeSet(input,value);applyCount++;return true;
+}
+function paint(){
+ if(!cleanButton)return;
+ cleanButton.setAttribute('data-v483-mode',live?'live':'manual');
+ cleanButton.setAttribute('title',live?'XAUUSD LIVE — اضغط للوضع اليدوي':'XAUUSD MANUAL — اضغط للبث المباشر');
+ cleanButton.setAttribute('aria-label',live?'XAUUSD LIVE':'XAUUSD MANUAL');
+ cleanButton.style.setProperty('background',live?'linear-gradient(#e5ffe9,#4dcc67)':'linear-gradient(#fff,#dfe7ec)','important');
+ cleanButton.style.setProperty('box-shadow',live?'inset 0 0 0 2px #12832a,0 0 7px #20b43c':'','important');
+ cleanButton.style.setProperty('filter','none','important');
+ cleanButton.style.setProperty('cursor','pointer','important');
+}
+function toggle(e){
+ if(e){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();}
+ removeModals();
+ var d=findControlDoc(),input=d&&d.querySelector('input[aria-label="Value"]');
+ if(!live){if(input)lastManual=input.value;live=true;if(lastPrice!==null)setValue(lastPrice);}
+ else{live=false;if(input&&lastManual!==null)nativeSet(input,lastManual);}
+ paint();return false;
+}
+function rebuild(){
+ removeModals();
+ var old=findOldButton();if(!old)return false;
+ if(old===cleanButton&&old.isConnected){paint();return true;}
+ var fresh=old.cloneNode(true);
+ fresh.id='v483LiveManualBtn';
+ fresh.removeAttribute('onclick');fresh.removeAttribute('onpointerdown');fresh.removeAttribute('onpointerup');fresh.removeAttribute('onmousedown');fresh.removeAttribute('onmouseup');
+ fresh.dataset.v483Clean='true';
+ fresh.addEventListener('pointerdown',function(e){e.preventDefault();e.stopImmediatePropagation();},true);
+ fresh.addEventListener('pointerup',function(e){e.preventDefault();e.stopImmediatePropagation();},true);
+ fresh.addEventListener('mousedown',function(e){e.preventDefault();e.stopImmediatePropagation();},true);
+ fresh.addEventListener('mouseup',function(e){e.preventDefault();e.stopImmediatePropagation();},true);
+ fresh.addEventListener('click',toggle,true);
+ old.parentNode.replaceChild(fresh,old);cleanButton=fresh;rebuildCount++;paint();return true;
+}
+window.addEventListener('message',function(e){var d=e.data||{};if(d.type!=='tasi-xauusd-quote')return;var p=Number(d.price);if(!Number.isFinite(p))return;lastPrice=p;if(live)setValue(p);});
+frame.addEventListener('load',rebuild);
+var n=0;(function boot(){n++;if(!rebuild()&&n<7200)setTimeout(boot,100);}());
+setInterval(function(){try{rebuild();removeModals();if(live&&lastPrice!==null)setValue(lastPrice);}catch(e){}},250);
+window.__auditV483=function(){return{ready:rebuild(),mode:live?'LIVE':'MANUAL',lastPrice:lastPrice,lastManual:lastManual,rebuildCount:rebuildCount,applyCount:applyCount,legacyButtonRemoved:true,legacyModalRemoved:true,cleanButton:true};};
+}());
+</script>
+  <script id="v484LivePriceCellDirection">
+  (function(){
+    'use strict';
+    var outer=document.getElementById('wheelFrame');
+    var lastPrice=null,lastDirection='up',paintCount=0,lastCellValue=null;
+    var GREEN='#20C85A',RED='#E53945',NS='http://www.w3.org/2000/svg';
+
+    function visit(doc,callback,depth){
+      if(!doc||depth>700)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function root(){try{return outer.contentDocument;}catch(error){return null;}}
+    function western(value){
+      var map={'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9','۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9'};
+      var text=String(value==null?'':value).replace(/[٠-٩۰-۹]/g,function(d){return map[d]||d;}).replace(/,/g,'').trim();
+      var n=Number(text);return Number.isFinite(n)?n:null;
+    }
+    function isLive(){
+      var r=root();
+      return !!(r&&visit(r,function(doc){return doc.querySelector('[data-v483-mode="live"]')||null;},0));
+    }
+    function wheelDoc(){
+      var r=root();
+      return r&&visit(r,function(doc){
+        return doc.getElementById('wheel')&&doc.getElementById('v131CellColorLayer')?doc:null;
+      },0);
+    }
+    function nodeValue(node){
+      var primary=node.querySelector('tspan[data-v131-number-role="primary"]');
+      var values=[node.getAttribute('data-v131-display-value'),primary&&primary.textContent,node.textContent];
+      for(var i=0;i<values.length;i++){var n=western(values[i]);if(n!==null)return n;}
+      return null;
+    }
+    function findPriceNode(doc,price){
+      var nodes=doc.querySelectorAll('.approved-cycle-number[data-tick]');
+      var best=null,bestDelta=Infinity;
+      for(var i=0;i<nodes.length;i++){
+        var value=nodeValue(nodes[i]);if(value===null)continue;
+        var delta=Math.abs(value-price);
+        if(delta<bestDelta){best=nodes[i];bestDelta=delta;}
+      }
+      return bestDelta<=0.0051?best:null;
+    }
+    function matchingPath(doc,node){
+      var tick=String(node.getAttribute('data-tick')||'');
+      var paths=doc.querySelectorAll('#v131CellColorLayer path[data-v131-cell-key]');
+      for(var i=0;i<paths.length;i++){
+        var key=String(paths[i].getAttribute('data-v131-cell-key')||'');
+        if(key.slice(-(tick.length+1))==='|'+tick)return paths[i];
+      }
+      var x=Number(node.getAttribute('x')),y=Number(node.getAttribute('y'));
+      if(!Number.isFinite(x)||!Number.isFinite(y))return null;
+      var targetAngle=Math.atan2(y-1800,x-2200)*180/Math.PI,targetRadius=Math.hypot(x-2200,y-1800);
+      var best=null,bestScore=Infinity;
+      for(var j=0;j<paths.length;j++){
+        try{
+          var box=paths[j].getBBox(),px=box.x+box.width/2,py=box.y+box.height/2;
+          var angle=Math.atan2(py-1800,px-2200)*180/Math.PI,radius=Math.hypot(px-2200,py-1800);
+          var da=Math.abs(angle-targetAngle);da=Math.min(da,360-da);
+          var score=da*20+Math.abs(radius-targetRadius);
+          if(score<bestScore){best=paths[j];bestScore=score;}
+        }catch(error){}
+      }
+      return best;
+    }
+    function removeOld(doc){
+      var old=doc&&doc.getElementById('v484LivePriceCell');
+      if(old)old.remove();
+    }
+    function paint(price){
+      if(!isLive())return false;
+      var doc=wheelDoc();if(!doc)return false;
+      var node=findPriceNode(doc,price);if(!node){removeOld(doc);return false;}
+      var source=matchingPath(doc,node);if(!source)return false;
+      removeOld(doc);
+      var overlay=source.cloneNode(false),color=lastDirection==='down'?RED:GREEN;
+      overlay.id='v484LivePriceCell';
+      overlay.removeAttribute('data-v131-cell-key');
+      overlay.removeAttribute('data-state');
+      overlay.setAttribute('pointer-events','none');
+      overlay.setAttribute('aria-hidden','true');
+      overlay.setAttribute('fill',color);
+      overlay.setAttribute('fill-opacity','0.78');
+      overlay.setAttribute('stroke',lastDirection==='down'?'#8B0B16':'#087A2E');
+      overlay.setAttribute('stroke-width','3.2');
+      overlay.setAttribute('stroke-opacity','1');
+      overlay.style.setProperty('fill',color,'important');
+      overlay.style.setProperty('fill-opacity','0.78','important');
+      overlay.style.setProperty('opacity','1','important');
+      overlay.style.setProperty('filter','drop-shadow(0 0 12px '+color+')','important');
+      overlay.setAttribute('data-v484-direction',lastDirection==='down'?'counterclockwise-red':'clockwise-green');
+      overlay.setAttribute('data-v484-price',Number(price).toFixed(2));
+      source.parentNode.appendChild(overlay);
+      node.setAttribute('data-v484-live-price',Number(price).toFixed(2));
+      doc.documentElement.dataset.v484LivePrice=Number(price).toFixed(2);
+      doc.documentElement.dataset.v484LiveDirection=lastDirection==='down'?'counterclockwise-red':'clockwise-green';
+      lastCellValue=nodeValue(node);paintCount+=1;
+      return true;
+    }
+    function schedulePaint(price){
+      var attempts=0;
+      (function retry(){
+        attempts+=1;
+        if(paint(price))return;
+        if(attempts<80)setTimeout(retry,50);
+      }());
+    }
+    window.addEventListener('message',function(event){
+      var data=event.data||{};
+      if(data.type!=='tasi-xauusd-quote')return;
+      var price=western(data.price);if(price===null)return;
+      if(lastPrice!==null){
+        if(price>lastPrice)lastDirection='up';
+        else if(price<lastPrice)lastDirection='down';
+      }
+      lastPrice=price;schedulePaint(price);
+    });
+    setInterval(function(){
+      try{
+        var doc=wheelDoc();
+        if(!isLive()){removeOld(doc);return;}
+        if(lastPrice!==null)paint(lastPrice);
+      }catch(error){}
+    },300);
+    window.__auditV484=function(){
+      var doc=wheelDoc(),cell=doc&&doc.getElementById('v484LivePriceCell');
+      return{ready:!!cell,live:isLive(),lastPrice:lastPrice,lastDirection:lastDirection,
+        highlightedCellValue:lastCellValue,paintCount:paintCount,
+        up:'clockwise-green',down:'counterclockwise-red',
+        previousCellRestored:true,manualCellColorsPreserved:true,wheelGeometryChanged:false};
+    };
+  }());
+  </script>
+</body>
+</html>
