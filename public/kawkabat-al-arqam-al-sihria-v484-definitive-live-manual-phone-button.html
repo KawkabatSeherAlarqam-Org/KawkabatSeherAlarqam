@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>كوكبة الأرقام السحرية V484 — مفتاح LIVE/MANUAL نهائي</title>
+<style>html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}#wheelFrame{display:block;width:100%;height:100%;border:0}</style>
+</head>
+<body>
+<iframe id="wheelFrame" title="كوكبة الأرقام السحرية" src="https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/61810e76ef6b576936fcdfd3ccd04ee4ece1bff1/public/kawkabat-al-arqam-al-sihria-v482-amibroker-live-phone-toggle.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('wheelFrame'),live=true,lastManual=null,lastPrice=null,applyCount=0,boundDocs=new WeakSet();
+function visit(doc,fn,depth){
+ if(!doc||depth>800)return null;var hit=fn(doc);if(hit)return hit;
+ var fs=doc.querySelectorAll('iframe');for(var i=0;i<fs.length;i++){try{var x=visit(fs[i].contentDocument,fn,depth+1);if(x)return x;}catch(e){}}return null;
+}
+function root(){try{return frame.contentDocument;}catch(e){return null;}}
+function controlDoc(){var r=root();return r&&visit(r,function(d){return d.querySelector('input[aria-label="Value"]')?d:null;},0);}
+function nativeSet(input,value){
+ var w=input.ownerDocument.defaultView,p=w.HTMLInputElement&&w.HTMLInputElement.prototype,ds=p&&Object.getOwnPropertyDescriptor(p,'value');
+ if(ds&&ds.set)ds.set.call(input,value);else input.value=value;
+ ['input','change','keyup','blur'].forEach(function(n){input.dispatchEvent(new w.Event(n,{bubbles:true}));});
+}
+function setValue(price){var d=controlDoc(),input=d&&d.querySelector('input[aria-label="Value"]');if(!input)return false;var v=Number(price).toFixed(2);if(input.value!==v)nativeSet(input,v);applyCount++;return true;}
+function isPhone(node){if(!node||!node.closest)return null;var b=node.closest('button,[role="button"]');if(!b)return null;var k=(b.id||'')+' '+(b.title||'')+' '+(b.getAttribute('aria-label')||'');return /v62ConnectionBtn|v483LiveManualBtn|v484LiveManualBtn|Connection settings|إعدادات الاتصال|XAUUSD (LIVE|MANUAL)/i.test(k)?b:null;}
+function removeLegacy(doc){
+ var modal=doc.getElementById('v62ConnectionModal')||doc.querySelector('[aria-label="Connection settings dialog"]');if(modal)modal.remove();
+ var style=doc.getElementById('v484NoLegacyConnectionModal');if(!style){style=doc.createElement('style');style.id='v484NoLegacyConnectionModal';style.textContent='#v62ConnectionModal{display:none!important;visibility:hidden!important;pointer-events:none!important}';doc.head.appendChild(style);}
+}
+function paint(button){
+ if(!button)return;button.id='v484LiveManualBtn';button.dataset.v484Mode=live?'live':'manual';
+ button.title=live?'XAUUSD LIVE — اضغط للعودة إلى MANUAL':'XAUUSD MANUAL — اضغط لتفعيل LIVE';button.setAttribute('aria-label',live?'XAUUSD LIVE':'XAUUSD MANUAL');
+ button.style.setProperty('background',live?'linear-gradient(#e5ffe9,#4dcc67)':'linear-gradient(#fff,#dfe7ec)','important');
+ button.style.setProperty('box-shadow',live?'inset 0 0 0 2px #12832a,0 0 7px #20b43c':'','important');button.style.setProperty('filter','none','important');
+}
+function toggle(){
+ var d=controlDoc(),input=d&&d.querySelector('input[aria-label="Value"]');
+ if(!live){if(input)lastManual=input.value;live=true;if(lastPrice!==null)setValue(lastPrice);}else{live=false;if(input&&lastManual!==null)nativeSet(input,lastManual);}
+ install();
+}
+function intercept(event){
+ var button=isPhone(event.target);if(!button)return;
+ event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+ if(event.type==='click')toggle();
+ return false;
+}
+function bindDoc(doc){
+ removeLegacy(doc);
+ if(!boundDocs.has(doc)){boundDocs.add(doc);['pointerdown','pointerup','mousedown','mouseup','click'].forEach(function(type){doc.addEventListener(type,intercept,true);});}
+ var button=doc.getElementById('v62ConnectionBtn')||doc.getElementById('v483LiveManualBtn')||doc.getElementById('v484LiveManualBtn');
+ if(button&&button.dataset.v484CleanButton!=='true'){
+  var clean=button.cloneNode(true);
+  clean.dataset.v484CleanButton='true';
+  clean.removeAttribute('onclick');clean.removeAttribute('onpointerdown');clean.removeAttribute('onpointerup');
+  button.replaceWith(clean);button=clean;
+ }
+ if(button)paint(button);
+}
+function install(){var r=root();if(!r)return false;var found=false;visit(r,function(doc){bindDoc(doc);if(doc.getElementById('v484LiveManualBtn'))found=true;return null;},0);return found;}
+window.addEventListener('message',function(e){var d=e.data||{};if(d.type!=='tasi-xauusd-quote')return;var p=Number(d.price);if(!Number.isFinite(p))return;lastPrice=p;if(live)setValue(p);});
+frame.addEventListener('load',install);var n=0;(function boot(){n++;if(!install()&&n<7200)setTimeout(boot,100);}());
+setInterval(function(){try{install();if(live&&lastPrice!==null)setValue(lastPrice);}catch(e){}},200);
+window.__auditV484=function(){return{ready:install(),mode:live?'LIVE':'MANUAL',lastPrice:lastPrice,lastManual:lastManual,applyCount:applyCount,legacyModalPermanentlyRemoved:true,legacyButtonListenersRemovedByCleanClone:true,documentCaptureInterception:true};};
+}());
+</script>
+</body></html>
