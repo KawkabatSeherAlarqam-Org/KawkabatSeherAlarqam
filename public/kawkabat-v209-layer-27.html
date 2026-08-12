@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — V27 + Brown Line Clear + Outer Frame Shift V28</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-28.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+
+    var appFrame=document.getElementById('appFrame');
+    var poll=null;
+    var BROWN_WIDTH_ADD=12;
+    var BROWN_RADIUS_ADD=BROWN_WIDTH_ADD/2;
+    var OUTER_FRAME_SHIFT=14;
+
+    function locateWheelDocument(doc,depth){
+      if(!doc||depth>32)return null;
+      if(doc.getElementById('wheel'))return doc;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i+=1){
+        try{
+          var found=locateWheelDocument(frames[i].contentDocument,depth+1);
+          if(found)return found;
+        }catch(error){}
+      }
+      return null;
+    }
+
+    function readNumericStyle(view,node,property,fallback){
+      var value=Number.parseFloat(view.getComputedStyle(node).getPropertyValue(property));
+      return Number.isFinite(value)?value:fallback;
+    }
+
+    function setCircleRadiusOnce(circle,delta,key){
+      if(!circle)return false;
+      var attr='data-v28-original-r-'+key;
+      var original=circle.getAttribute(attr);
+      if(original==null){
+        original=circle.getAttribute('r');
+        circle.setAttribute(attr,original);
+      }
+      var radius=Number(original);
+      if(!Number.isFinite(radius))return false;
+      circle.setAttribute('r',String(radius+delta));
+      return true;
+    }
+
+    function moveCardinalOrnamentOutward(group,angle){
+      if(!group)return;
+      var original=group.getAttribute('data-v28-original-transform');
+      if(original==null){
+        original=group.getAttribute('transform')||'';
+        group.setAttribute('data-v28-original-transform',original);
+      }
+      var offset='';
+      if(angle===360)offset='translate(0 -'+OUTER_FRAME_SHIFT+')';
+      else if(angle===90)offset='translate('+OUTER_FRAME_SHIFT+' 0)';
+      else if(angle===180)offset='translate(0 '+OUTER_FRAME_SHIFT+')';
+      else if(angle===270)offset='translate(-'+OUTER_FRAME_SHIFT+' 0)';
+      group.setAttribute('transform',(original+' '+offset).trim());
+    }
+
+    function applyBrownAndOuterFrameSpacing(){
+      try{
+        var wheelDoc=locateWheelDocument(appFrame.contentDocument,0);
+        if(!wheelDoc)return false;
+        var view=wheelDoc.defaultView;
+        var angleFrame=wheelDoc.getElementById('angleFrame');
+        var outerFrame=wheelDoc.getElementById('outerBlackFrame');
+        var ornaments=wheelDoc.getElementById('cardinalOrnaments');
+        if(!view||!angleFrame||!outerFrame||!ornaments)return false;
+
+        var brown=angleFrame.querySelector('.angle-band-outer-line');
+        if(!brown)return false;
+
+        var originalR=brown.getAttribute('data-v28-original-r');
+        if(originalR==null){
+          originalR=brown.getAttribute('r');
+          brown.setAttribute('data-v28-original-r',originalR);
+        }
+        var radius=Number(originalR);
+        if(!Number.isFinite(radius))return false;
+
+        var originalWidth=brown.getAttribute('data-v28-original-width');
+        if(originalWidth==null){
+          originalWidth=String(readNumericStyle(view,brown,'stroke-width',6.5));
+          brown.setAttribute('data-v28-original-width',originalWidth);
+        }
+        var width=Number(originalWidth);
+        if(!Number.isFinite(width))return false;
+
+        brown.setAttribute('r',String(radius+BROWN_RADIUS_ADD));
+        brown.style.setProperty('stroke-width',(width+BROWN_WIDTH_ADD)+'px','important');
+        brown.style.setProperty('opacity','1','important');
+        brown.style.setProperty('vector-effect','non-scaling-stroke','important');
+
+        var circles=outerFrame.querySelectorAll('circle');
+        if(!circles.length)return false;
+        circles.forEach(function(circle){
+          setCircleRadiusOnce(circle,OUTER_FRAME_SHIFT,'outer-frame');
+        });
+
+        ornaments.querySelectorAll('.cardinal-ornament').forEach(function(group){
+          moveCardinalOrnamentOutward(group,Number(group.getAttribute('data-angle')));
+        });
+
+        wheelDoc.documentElement.dataset.brownAngleOuterLineClearV28='true';
+        wheelDoc.documentElement.dataset.brownWidthAdd=String(BROWN_WIDTH_ADD);
+        wheelDoc.documentElement.dataset.brownRadiusAdd=String(BROWN_RADIUS_ADD);
+        wheelDoc.documentElement.dataset.outerFrameShift=String(OUTER_FRAME_SHIFT);
+        wheelDoc.documentElement.dataset.brownInnerBoundaryChanged='false';
+        wheelDoc.documentElement.dataset.innerWheelGeometryChanged='false';
+
+        view.__auditKawkabatBrownLineClearOuterFrameV28=function(){
+          return{
+            ok:true,
+            changedArea:'brown-angle-outer-line-thicker-outward-and-outer-frame-shifted-outward',
+            brownStrokeWidthBefore:width,
+            brownStrokeWidthAfter:width+BROWN_WIDTH_ADD,
+            brownRadiusBefore:radius,
+            brownRadiusAfter:radius+BROWN_RADIUS_ADD,
+            brownInnerBoundaryChanged:false,
+            outerFrameCircleCount:circles.length,
+            outerFrameShiftPx:OUTER_FRAME_SHIFT,
+            cardinalOrnamentsShiftedOutward:true,
+            angleNumbersChanged:false,
+            angleTicksChanged:false,
+            zodiacChanged:false,
+            wheelNumbersChanged:false,
+            innerWheelGeometryChanged:false
+          };
+        };
+        return true;
+      }catch(error){
+        return false;
+      }
+    }
+
+    function startPolling(){
+      if(poll)clearInterval(poll);
+      var attempts=0;
+      poll=setInterval(function(){
+        attempts+=1;
+        if(applyBrownAndOuterFrameSpacing()||attempts>=1100){
+          clearInterval(poll);
+          poll=null;
+        }
+      },100);
+    }
+
+    appFrame.addEventListener('load',startPolling);
+    startPolling();
+  }());
+  </script>
+</body>
+</html>

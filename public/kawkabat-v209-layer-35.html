@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — V17 + Outward Angle Band + Larger Fixed Angle Numbers V20</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-36.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+
+    var appFrame=document.getElementById('appFrame');
+    var poll=null;
+    var OUTWARD=16;
+
+    function locateWheelDocument(doc,depth){
+      if(!doc||depth>18)return null;
+      if(doc.getElementById('wheel'))return doc;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i+=1){
+        try{
+          var found=locateWheelDocument(frames[i].contentDocument,depth+1);
+          if(found)return found;
+        }catch(error){}
+      }
+      return null;
+    }
+
+    function setRadiusFromOriginal(node,delta){
+      if(!node)return false;
+      var original=node.getAttribute('data-v20-original-r');
+      if(original==null){
+        original=node.getAttribute('r');
+        node.setAttribute('data-v20-original-r',original);
+      }
+      var value=Number(original);
+      if(!Number.isFinite(value))return false;
+      node.setAttribute('r',String(value+delta));
+      return true;
+    }
+
+    function setOrnamentOutward(group,angle){
+      if(!group)return;
+      var transform='';
+      if(angle===360)transform='translate(0 -'+OUTWARD+')';
+      else if(angle===90)transform='translate('+OUTWARD+' 0)';
+      else if(angle===180)transform='translate(0 '+OUTWARD+')';
+      else if(angle===270)transform='translate(-'+OUTWARD+' 0)';
+      group.setAttribute('transform',transform);
+    }
+
+    function applyOutwardBandAndLargerNumbers(){
+      try{
+        var wheelDoc=locateWheelDocument(appFrame.contentDocument,0);
+        if(!wheelDoc)return false;
+
+        var angleFrame=wheelDoc.getElementById('angleFrame');
+        var outerFrame=wheelDoc.getElementById('outerBlackFrame');
+        var ornaments=wheelDoc.getElementById('cardinalOrnaments');
+        var labels=wheelDoc.querySelectorAll('.angle-label');
+        if(!angleFrame||!outerFrame||!ornaments||!labels.length)return false;
+
+        var style=wheelDoc.getElementById('angleBandOutwardLargerNumbersV20Style');
+        if(!style){
+          style=wheelDoc.createElement('style');
+          style.id='angleBandOutwardLargerNumbersV20Style';
+          (wheelDoc.head||wheelDoc.documentElement).appendChild(style);
+        }
+
+        style.textContent='\n'
+          + '.angle-band-shadow{stroke-width:120px!important;}\n'
+          + '.angle-band{stroke-width:108px!important;}\n'
+          + '.angle-label{font-size:28px!important;}\n'
+          + '.angle-label.ten-degree{font-size:32px!important;}\n';
+
+        setRadiusFromOriginal(angleFrame.querySelector('.angle-band-shadow'),OUTWARD/2);
+        setRadiusFromOriginal(angleFrame.querySelector('.angle-band'),OUTWARD/2);
+        setRadiusFromOriginal(angleFrame.querySelector('.angle-band-outer-line'),OUTWARD);
+        setRadiusFromOriginal(angleFrame.querySelector('.angle-band-highlight'),OUTWARD);
+
+        outerFrame.querySelectorAll('circle').forEach(function(circle){
+          setRadiusFromOriginal(circle,OUTWARD);
+        });
+
+        ornaments.querySelectorAll('.cardinal-ornament').forEach(function(group){
+          setOrnamentOutward(group,Number(group.getAttribute('data-angle')));
+        });
+
+        wheelDoc.documentElement.dataset.angleBandOutwardOnlyV20='true';
+        wheelDoc.documentElement.dataset.angleBandOutwardPx=String(OUTWARD);
+        wheelDoc.documentElement.dataset.angleBandInnerBoundaryChanged='false';
+        wheelDoc.documentElement.dataset.angleNumbersMoved='false';
+        wheelDoc.documentElement.dataset.angleNumberRegularSize='28px';
+        wheelDoc.documentElement.dataset.angleNumberTenDegreeSize='32px';
+
+        if(wheelDoc.defaultView){
+          wheelDoc.defaultView.__auditKawkabatAngleBandOutwardLargerNumbersV20=function(){
+            return{
+              ok:labels.length===68,
+              changedArea:'angle-band-and-outer-frame-outward-only-plus-angle-font-size',
+              outwardExpansionPx:OUTWARD,
+              regularFontSize:'28px',
+              tenDegreeFontSize:'32px',
+              angleNumberPositionChanged:false,
+              angleNumberTransformChanged:false,
+              angleBandInnerBoundaryChanged:false,
+              innerWheelGeometryChanged:false,
+              zodiacChanged:false,
+              wheelNumbersChanged:false,
+              valuesChanged:false,
+              angleTicksChanged:false,
+              outerFrameMovedOutward:true,
+              cardinalOrnamentsMovedOutward:true
+            };
+          };
+        }
+        return true;
+      }catch(error){
+        return false;
+      }
+    }
+
+    function startPolling(){
+      if(poll)clearInterval(poll);
+      var attempts=0;
+      poll=setInterval(function(){
+        attempts+=1;
+        if(applyOutwardBandAndLargerNumbers()||attempts>=700){
+          clearInterval(poll);
+          poll=null;
+        }
+      },100);
+    }
+
+    appFrame.addEventListener('load',startPolling);
+    startPolling();
+  }());
+  </script>
+</body>
+</html>

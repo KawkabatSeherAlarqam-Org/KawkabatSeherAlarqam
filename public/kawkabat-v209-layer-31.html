@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — V23 + Black Clear Intermediate Angle Ticks V24</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-32.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+
+    var appFrame=document.getElementById('appFrame');
+    var poll=null;
+
+    function locateWheelDocument(doc,depth){
+      if(!doc||depth>28)return null;
+      if(doc.getElementById('wheel'))return doc;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i+=1){
+        try{
+          var found=locateWheelDocument(frames[i].contentDocument,depth+1);
+          if(found)return found;
+        }catch(error){}
+      }
+      return null;
+    }
+
+    function angleFromLabel(label){
+      var match=String(label.textContent||'').match(/^(\d+)°$/);
+      return match?Number(match[1]):null;
+    }
+
+    function styleTick(tick,width,opacity,role){
+      tick.setAttribute('data-v24-role',role);
+      tick.setAttribute('stroke-width',String(width));
+      tick.style.setProperty('stroke','#17110D','important');
+      tick.style.setProperty('opacity',String(opacity),'important');
+      tick.style.setProperty('stroke-linecap','round','important');
+      tick.style.setProperty('vector-effect','non-scaling-stroke','important');
+    }
+
+    function applyBlackClearIntermediateTicks(){
+      try{
+        var wheelDoc=locateWheelDocument(appFrame.contentDocument,0);
+        if(!wheelDoc)return false;
+
+        var angleTicks=wheelDoc.getElementById('angleTicks');
+        var labels=wheelDoc.querySelectorAll('.angle-label');
+        if(!angleTicks||!labels.length)return false;
+
+        var ticks=angleTicks.querySelectorAll('line.angle-tick');
+        if(ticks.length!==360)return false;
+
+        var majorCount=0;
+        var fiveCount=0;
+        var minorCount=0;
+
+        ticks.forEach(function(tick,index){
+          if(index%10===0){
+            styleTick(tick,3.8,1,'ten-degree-major');
+            majorCount+=1;
+          }else if(index%5===0){
+            styleTick(tick,3.0,.98,'five-degree-mid');
+            fiveCount+=1;
+          }else{
+            styleTick(tick,1.35,.92,'one-degree-intermediate');
+            minorCount+=1;
+          }
+        });
+
+        var goldLabelCount=0;
+        labels.forEach(function(label){
+          var degree=angleFromLabel(label);
+          if(degree===null)return;
+          if(degree%10===5){
+            label.style.setProperty('fill','#D7B15A','important');
+            label.style.setProperty('stroke','#6C4516','important');
+            label.style.setProperty('stroke-width','1','important');
+            label.style.setProperty('paint-order','stroke fill','important');
+            label.style.setProperty('font-weight','900','important');
+            label.setAttribute('data-v24-gold-five-label','true');
+            goldLabelCount+=1;
+          }
+        });
+
+        wheelDoc.documentElement.dataset.blackClearIntermediateTicksV24='true';
+        wheelDoc.documentElement.dataset.majorTenDegreeTickCount=String(majorCount);
+        wheelDoc.documentElement.dataset.fiveDegreeTickCount=String(fiveCount);
+        wheelDoc.documentElement.dataset.intermediateOneDegreeTickCount=String(minorCount);
+        wheelDoc.documentElement.dataset.goldFiveDegreeLabelCount=String(goldLabelCount);
+        wheelDoc.documentElement.dataset.tickPositionChanged='false';
+        wheelDoc.documentElement.dataset.tickLengthChanged='false';
+        wheelDoc.documentElement.dataset.labelPositionChanged='false';
+
+        if(wheelDoc.defaultView){
+          wheelDoc.defaultView.__auditKawkabatBlackClearIntermediateTicksV24=function(){
+            return{
+              ok:majorCount===36&&fiveCount===36&&minorCount===288&&goldLabelCount===36,
+              changedArea:'angle-tick-color-weight-contrast-only',
+              tenDegreeTicks:{count:majorCount,color:'#17110D',strokeWidth:'3.8',opacity:'1'},
+              fiveDegreeTicks:{count:fiveCount,color:'#17110D',strokeWidth:'3.0',opacity:'.98'},
+              intermediateTicks:{count:minorCount,color:'#17110D',strokeWidth:'1.35',opacity:'.92'},
+              goldFiveDegreeLabels:{count:goldLabelCount,fill:'#D7B15A',stroke:'#6C4516'},
+              tickPositionChanged:false,
+              tickLengthChanged:false,
+              angleLabelPositionChanged:false,
+              angleBandChanged:false,
+              outerFrameChanged:false,
+              zodiacChanged:false,
+              wheelNumbersChanged:false,
+              valuesChanged:false
+            };
+          };
+        }
+
+        return majorCount===36&&fiveCount===36&&minorCount===288&&goldLabelCount===36;
+      }catch(error){
+        return false;
+      }
+    }
+
+    function startPolling(){
+      if(poll)clearInterval(poll);
+      var attempts=0;
+      poll=setInterval(function(){
+        attempts+=1;
+        if(applyBlackClearIntermediateTicks()||attempts>=1000){
+          clearInterval(poll);
+          poll=null;
+        }
+      },100);
+    }
+
+    appFrame.addEventListener('load',startPolling);
+    startPolling();
+  }());
+  </script>
+</body>
+</html>

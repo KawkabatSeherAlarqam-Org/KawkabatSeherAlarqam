@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — V20 + Clear Major 10 Degree Ticks V21</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-35.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+
+    var appFrame=document.getElementById('appFrame');
+    var poll=null;
+
+    function locateWheelDocument(doc,depth){
+      if(!doc||depth>24)return null;
+      if(doc.getElementById('wheel'))return doc;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i+=1){
+        try{
+          var found=locateWheelDocument(frames[i].contentDocument,depth+1);
+          if(found)return found;
+        }catch(error){}
+      }
+      return null;
+    }
+
+    function applyMajorTenDegreeTicksOnly(){
+      try{
+        var wheelDoc=locateWheelDocument(appFrame.contentDocument,0);
+        if(!wheelDoc)return false;
+
+        var angleTicks=wheelDoc.getElementById('angleTicks');
+        if(!angleTicks)return false;
+
+        var ticks=angleTicks.querySelectorAll('line.angle-tick');
+        if(ticks.length!==360)return false;
+
+        var majorCount=0;
+        ticks.forEach(function(tick,index){
+          if(index%10!==0)return;
+          tick.setAttribute('data-major-ten-degree-v21','true');
+          tick.setAttribute('stroke-width','3.8');
+          tick.style.setProperty('stroke','#17110D','important');
+          tick.style.setProperty('opacity','1','important');
+          tick.style.setProperty('stroke-linecap','round','important');
+          tick.style.setProperty('vector-effect','non-scaling-stroke','important');
+          majorCount+=1;
+        });
+
+        wheelDoc.documentElement.dataset.majorTenDegreeTicksV21='true';
+        wheelDoc.documentElement.dataset.majorTenDegreeTickCount=String(majorCount);
+        wheelDoc.documentElement.dataset.majorTenDegreeTickStrokeWidth='3.8';
+        wheelDoc.documentElement.dataset.majorTenDegreeTickPositionChanged='false';
+        wheelDoc.documentElement.dataset.majorTenDegreeTickLengthChanged='false';
+        wheelDoc.documentElement.dataset.majorTenDegreeTickGeometryChanged='false';
+
+        if(wheelDoc.defaultView){
+          wheelDoc.defaultView.__auditKawkabatMajorTenDegreeTicksV21=function(){
+            return{
+              ok:majorCount===36,
+              changedArea:'10-degree-tick-visual-weight-and-contrast-only',
+              targetAngles:'0,10,20,...,350',
+              majorTickCount:majorCount,
+              strokeWidth:'3.8',
+              stroke:'#17110D',
+              positionChanged:false,
+              lengthChanged:false,
+              angleLabelsChanged:false,
+              angleBandChanged:false,
+              outerFrameChanged:false,
+              zodiacChanged:false,
+              wheelNumbersChanged:false,
+              valuesChanged:false
+            };
+          };
+        }
+
+        return majorCount===36;
+      }catch(error){
+        return false;
+      }
+    }
+
+    function startPolling(){
+      if(poll)clearInterval(poll);
+      var attempts=0;
+      poll=setInterval(function(){
+        attempts+=1;
+        if(applyMajorTenDegreeTicksOnly()||attempts>=800){
+          clearInterval(poll);
+          poll=null;
+        }
+      },100);
+    }
+
+    appFrame.addEventListener('load',startPolling);
+    startPolling();
+  }());
+  </script>
+</body>
+</html>

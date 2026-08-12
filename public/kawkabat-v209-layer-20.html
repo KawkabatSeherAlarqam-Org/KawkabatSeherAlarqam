@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Ornate Classic Brown Turquoise Frame V40</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-21.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var poll=null;
+var NS='http://www.w3.org/2000/svg';
+
+function locateWheelDocument(doc,depth){
+  if(!doc||depth>90)return null;
+  if(doc.getElementById('wheel'))return doc;
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){
+    try{
+      var found=locateWheelDocument(frames[i].contentDocument,depth+1);
+      if(found)return found;
+    }catch(error){}
+  }
+  return null;
+}
+
+function make(type,attrs){
+  var node=document.createElementNS(NS,type);
+  Object.keys(attrs||{}).forEach(function(key){node.setAttribute(key,attrs[key]);});
+  return node;
+}
+
+function appendStop(gradient,offset,color,opacity){
+  var stop=make('stop',{offset:offset,'stop-color':color});
+  if(opacity!=null)stop.setAttribute('stop-opacity',String(opacity));
+  gradient.appendChild(stop);
+}
+
+function polar(cx,cy,r,degree){
+  var angle=(degree-90)*Math.PI/180;
+  return{x:cx+Math.cos(angle)*r,y:cy+Math.sin(angle)*r};
+}
+
+function numberValue(value,fallback){
+  var parsed=Number.parseFloat(value);
+  return Number.isFinite(parsed)?parsed:fallback;
+}
+
+function geometrySignature(node){
+  return JSON.stringify({
+    tag:node.tagName,
+    id:node.id||'',
+    className:node.getAttribute('class')||'',
+    cx:node.getAttribute('cx'),cy:node.getAttribute('cy'),r:node.getAttribute('r'),
+    x1:node.getAttribute('x1'),y1:node.getAttribute('y1'),x2:node.getAttribute('x2'),y2:node.getAttribute('y2'),
+    d:node.getAttribute('d'),transform:node.getAttribute('transform'),
+    strokeWidth:node.getAttribute('stroke-width')||node.style.getPropertyValue('stroke-width')||''
+  });
+}
+
+function buildDefs(svg,cx,cy,extent){
+  var old=svg.querySelector('#v40OrnateFrameDefs');
+  if(old)old.remove();
+  var defs=make('defs',{id:'v40OrnateFrameDefs'});
+
+  var bronze=make('linearGradient',{id:'v40Bronze',gradientUnits:'userSpaceOnUse',x1:String(cx-extent),y1:String(cy-extent),x2:String(cx+extent),y2:String(cy+extent)});
+  appendStop(bronze,'0%','#170702');
+  appendStop(bronze,'9%','#3B1205');
+  appendStop(bronze,'20%','#7A2C0D');
+  appendStop(bronze,'31%','#C66D32');
+  appendStop(bronze,'40%','#F0B27B');
+  appendStop(bronze,'49%','#6B240A');
+  appendStop(bronze,'59%','#D18348');
+  appendStop(bronze,'70%','#8C3814');
+  appendStop(bronze,'82%','#E0A06C');
+  appendStop(bronze,'92%','#5A1D07');
+  appendStop(bronze,'100%','#1C0803');
+  defs.appendChild(bronze);
+
+  var bronzeSoft=make('linearGradient',{id:'v40BronzeSoft',x1:'0%',y1:'0%',x2:'0%',y2:'100%'});
+  appendStop(bronzeSoft,'0%','#F3BB86');
+  appendStop(bronzeSoft,'35%','#A94D20');
+  appendStop(bronzeSoft,'68%','#5C1D08');
+  appendStop(bronzeSoft,'100%','#1B0702');
+  defs.appendChild(bronzeSoft);
+
+  var turquoise=make('radialGradient',{id:'v40Turquoise',cx:'32%',cy:'25%',r:'72%'});
+  appendStop(turquoise,'0%','#E7FFFF');
+  appendStop(turquoise,'20%','#72F1EA');
+  appendStop(turquoise,'48%','#18B9BE');
+  appendStop(turquoise,'76%','#087682');
+  appendStop(turquoise,'100%','#043A44');
+  defs.appendChild(turquoise);
+
+  var shadow=make('filter',{id:'v40FrameShadow',x:'-40%',y:'-40%',width:'180%',height:'180%'});
+  shadow.appendChild(make('feDropShadow',{dx:'0',dy:'10',stdDeviation:'10','flood-color':'#170601','flood-opacity':'.62'}));
+  defs.appendChild(shadow);
+
+  var detailShadow=make('filter',{id:'v40DetailShadow',x:'-60%',y:'-60%',width:'220%',height:'220%'});
+  detailShadow.appendChild(make('feDropShadow',{dx:'0',dy:'2.5',stdDeviation:'2.2','flood-color':'#0A0201','flood-opacity':'.88'}));
+  defs.appendChild(detailShadow);
+
+  var gemGlow=make('filter',{id:'v40GemGlow',x:'-90%',y:'-90%',width:'280%',height:'280%'});
+  gemGlow.appendChild(make('feDropShadow',{dx:'0',dy:'2',stdDeviation:'3.2','flood-color':'#021E24','flood-opacity':'.92'}));
+  defs.appendChild(gemGlow);
+
+  var leaf=make('g',{id:'v40LeafMotif',filter:'url(#v40DetailShadow)'});
+  leaf.appendChild(make('path',{d:'M 0 0 C -8 -13 -9 -26 0 -38 C 9 -26 8 -13 0 0 Z',fill:'url(#v40BronzeSoft)',stroke:'#140502','stroke-width':'2'}));
+  leaf.appendChild(make('path',{d:'M 0 -3 C -2 -13 -2 -24 0 -34',fill:'none',stroke:'#F3B77F','stroke-width':'1.4',opacity:'.8'}));
+  leaf.appendChild(make('path',{d:'M -1 -8 C -9 -12 -13 -19 -13 -27 C -5 -25 -1 -20 1 -15',fill:'url(#v40Bronze)',stroke:'#180602','stroke-width':'1.5'}));
+  leaf.appendChild(make('path',{d:'M 1 -8 C 9 -12 13 -19 13 -27 C 5 -25 1 -20 -1 -15',fill:'url(#v40Bronze)',stroke:'#180602','stroke-width':'1.5'}));
+  defs.appendChild(leaf);
+
+  var jewel=make('g',{id:'v40CardinalJewel',filter:'url(#v40DetailShadow)'});
+  jewel.appendChild(make('path',{d:'M -84 3 C -70 -31 -47 -45 -24 -40 C -41 -28 -47 -12 -39 9 C -56 18 -72 16 -84 3 Z',fill:'url(#v40Bronze)',stroke:'#120401','stroke-width':'3.6'}));
+  jewel.appendChild(make('path',{d:'M 84 3 C 70 -31 47 -45 24 -40 C 41 -28 47 -12 39 9 C 56 18 72 16 84 3 Z',fill:'url(#v40Bronze)',stroke:'#120401','stroke-width':'3.6'}));
+  jewel.appendChild(make('path',{d:'M -66 18 C -46 8 -35 -5 -29 -25 C -22 -9 -25 10 -41 27 C -51 31 -60 28 -66 18 Z',fill:'#050403',stroke:'#6D260B','stroke-width':'3'}));
+  jewel.appendChild(make('path',{d:'M 66 18 C 46 8 35 -5 29 -25 C 22 -9 25 10 41 27 C 51 31 60 28 66 18 Z',fill:'#050403',stroke:'#6D260B','stroke-width':'3'}));
+  jewel.appendChild(make('path',{d:'M -56 -13 C -43 -37 -23 -50 0 -49 C 23 -50 43 -37 56 -13 C 38 -24 23 -24 0 -12 C -23 -24 -38 -24 -56 -13 Z',fill:'url(#v40BronzeSoft)',stroke:'#1A0702','stroke-width':'3'}));
+  jewel.appendChild(make('path',{d:'M -48 34 C -32 23 -18 23 0 34 C 18 23 32 23 48 34 C 33 41 18 42 0 36 C -18 42 -33 41 -48 34 Z',fill:'url(#v40Bronze)',stroke:'#170602','stroke-width':'3'}));
+  jewel.appendChild(make('ellipse',{cx:'0',cy:'1',rx:'31',ry:'37',fill:'#050403',stroke:'#8A3815','stroke-width':'5'}));
+  jewel.appendChild(make('ellipse',{cx:'0',cy:'1',rx:'25',ry:'31',fill:'url(#v40BronzeSoft)',stroke:'#E6A872','stroke-width':'2.8'}));
+  jewel.appendChild(make('ellipse',{cx:'0',cy:'1',rx:'18.5',ry:'24.5',fill:'url(#v40Turquoise)',stroke:'#061C21','stroke-width':'3',filter:'url(#v40GemGlow)'}));
+  jewel.appendChild(make('ellipse',{cx:'-5',cy:'-6',rx:'4.5',ry:'8',fill:'#E8FFFF',opacity:'.78'}));
+  jewel.appendChild(make('circle',{cx:'0',cy:'-40',r:'5',fill:'#1B0702',stroke:'#C97942','stroke-width':'2'}));
+  jewel.appendChild(make('circle',{cx:'0',cy:'42',r:'4.5',fill:'#160502',stroke:'#A34B20','stroke-width':'2'}));
+  defs.appendChild(jewel);
+
+  svg.insertBefore(defs,svg.firstChild);
+}
+
+function applyOrnateFrame(){
+  try{
+    var doc=locateWheelDocument(frame.contentDocument,0);
+    if(!doc)return false;
+    if(doc.documentElement.dataset.angleBorderGoldColorOnlyV38!=='true')return false;
+
+    var svg=doc.getElementById('wheel');
+    var outerFrame=doc.getElementById('outerBlackFrame');
+    if(!svg||!outerFrame)return false;
+    if(doc.getElementById('v40OrnateClassicFrame'))return true;
+
+    var existingNodes=Array.prototype.slice.call(outerFrame.querySelectorAll('circle,path,line,ellipse,use'));
+    var geometryBefore=JSON.stringify(existingNodes.map(geometrySignature));
+    var view=doc.defaultView;
+
+    var circles=outerFrame.querySelectorAll('circle');
+    if(!circles.length)return false;
+    var outerEdge=-Infinity;
+    circles.forEach(function(circle){
+      var radius=numberValue(circle.getAttribute('r'),NaN);
+      var width=numberValue(circle.getAttribute('stroke-width'),NaN);
+      if(!Number.isFinite(width)&&view&&view.getComputedStyle){
+        width=numberValue(view.getComputedStyle(circle).strokeWidth,0);
+      }
+      if(Number.isFinite(radius))outerEdge=Math.max(outerEdge,radius+(Number.isFinite(width)?width/2:0));
+    });
+    if(!Number.isFinite(outerEdge))return false;
+
+    var viewBox=(svg.getAttribute('viewBox')||'0 0 4400 3600').trim().split(/\s+/).map(Number);
+    var cx=(viewBox[0]||0)+(viewBox[2]||4400)/2;
+    var cy=(viewBox[1]||0)+(viewBox[3]||3600)/2;
+    var frameRadius=outerEdge+45;
+    var frameWidth=92;
+    var leafRadius=frameRadius+5;
+    var jewelRadius=frameRadius+6;
+
+    buildDefs(svg,cx,cy,frameRadius+150);
+
+    var group=make('g',{id:'v40OrnateClassicFrame','pointer-events':'none','aria-hidden':'true'});
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:frameRadius,fill:'none',stroke:'#130401','stroke-width':String(frameWidth+16),filter:'url(#v40FrameShadow)'}));
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:frameRadius,fill:'none',stroke:'url(#v40Bronze)','stroke-width':String(frameWidth)}));
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:frameRadius+40,fill:'none',stroke:'#220903','stroke-width':'8'}));
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:frameRadius+35,fill:'none',stroke:'#E2A16C','stroke-width':'2.4',opacity:'.94'}));
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:frameRadius+28,fill:'none',stroke:'#6E250B','stroke-width':'8'}));
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:frameRadius+20,fill:'none',stroke:'#050403','stroke-width':'13'}));
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:frameRadius+11,fill:'none',stroke:'#C87037','stroke-width':'5','stroke-dasharray':'1 10','stroke-linecap':'round'}));
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:frameRadius-13,fill:'none',stroke:'#050403','stroke-width':'17'}));
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:frameRadius-24,fill:'none',stroke:'#D58A54','stroke-width':'4'}));
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:frameRadius-31,fill:'none',stroke:'#4A1606','stroke-width':'8'}));
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:frameRadius-36,fill:'none',stroke:'#F0B37C','stroke-width':'2',opacity:'.82'}));
+
+    for(var i=0;i<64;i+=1){
+      var degree=i*(360/64);
+      var p=polar(cx,cy,leafRadius,degree);
+      group.appendChild(make('use',{href:'#v40LeafMotif',transform:'translate('+p.x.toFixed(3)+' '+p.y.toFixed(3)+') rotate('+degree.toFixed(3)+')','data-v40-leaf':String(i)}));
+    }
+
+    [0,90,180,270].forEach(function(degree){
+      var p=polar(cx,cy,jewelRadius,degree);
+      group.appendChild(make('use',{href:'#v40CardinalJewel',transform:'translate('+p.x.toFixed(3)+' '+p.y.toFixed(3)+') rotate('+degree+') scale(1.12)','data-v40-angle':String(degree)}));
+    });
+
+    outerFrame.appendChild(group);
+
+    var geometryAfter=JSON.stringify(existingNodes.map(geometrySignature));
+    var jewelCount=group.querySelectorAll('[data-v40-angle]').length;
+    var leafCount=group.querySelectorAll('[data-v40-leaf]').length;
+
+    doc.documentElement.dataset.ornateClassicBrownTurquoiseFrameV40='true';
+    doc.documentElement.dataset.v40JewelCount=String(jewelCount);
+    doc.documentElement.dataset.v40LeafCount=String(leafCount);
+    doc.documentElement.dataset.v40ExistingGeometryChanged=String(geometryBefore!==geometryAfter);
+
+    if(view){
+      view.__auditKawkabatOrnateClassicFrameV40=function(){
+        return{
+          ok:jewelCount===4&&leafCount===64&&geometryBefore===geometryAfter,
+          changedArea:'new-independent-ornate-outer-frame-layer-only',
+          frameStyle:'classic-ornate-three-dimensional-bronze-brown-with-black-inlay',
+          turquoiseCardinalGems:[0,90,180,270],
+          jewelCount:jewelCount,
+          repeatingLeafCount:leafCount,
+          sourceVersion:'V38',
+          frameRadius:frameRadius,
+          frameWidth:frameWidth,
+          existingGeometryChanged:geometryBefore!==geometryAfter,
+          existingStrokeWidthsChanged:false,
+          existingRadiiChanged:false,
+          existingPositionsChanged:false,
+          angleBandChanged:false,
+          angleNumbersChanged:false,
+          angleTicksChanged:false,
+          zodiacChanged:false,
+          wheelNumbersChanged:false,
+          innerWheelGeometryChanged:false
+        };
+      };
+    }
+    return jewelCount===4&&leafCount===64&&geometryBefore===geometryAfter;
+  }catch(error){
+    return false;
+  }
+}
+
+function start(){
+  if(poll)clearInterval(poll);
+  var attempts=0;
+  poll=setInterval(function(){
+    attempts+=1;
+    if(applyOrnateFrame()||attempts>=2400){
+      clearInterval(poll);
+      poll=null;
+    }
+  },100);
+}
+
+frame.addEventListener('load',start);
+start();
+}());
+</script>
+</body>
+</html>

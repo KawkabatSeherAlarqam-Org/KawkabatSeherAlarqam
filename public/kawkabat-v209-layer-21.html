@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Angle Border Gold Color Only V38</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-22.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var poll=null;
+
+function locateWheelDocument(doc,depth){
+  if(!doc||depth>70)return null;
+  if(doc.getElementById('wheel'))return doc;
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){
+    try{
+      var found=locateWheelDocument(frames[i].contentDocument,depth+1);
+      if(found)return found;
+    }catch(error){}
+  }
+  return null;
+}
+
+function geometrySignature(node){
+  return JSON.stringify({
+    tag:node.tagName,
+    id:node.id||'',
+    className:node.getAttribute('class')||'',
+    cx:node.getAttribute('cx'),
+    cy:node.getAttribute('cy'),
+    r:node.getAttribute('r'),
+    x1:node.getAttribute('x1'),
+    y1:node.getAttribute('y1'),
+    x2:node.getAttribute('x2'),
+    y2:node.getAttribute('y2'),
+    d:node.getAttribute('d'),
+    transform:node.getAttribute('transform'),
+    strokeWidth:node.getAttribute('stroke-width')||node.style.getPropertyValue('stroke-width')||''
+  });
+}
+
+function applyAngleBorderGoldColorOnly(){
+  try{
+    var doc=locateWheelDocument(frame.contentDocument,0);
+    if(!doc)return false;
+
+    var angleLine=doc.querySelector('#angleFrame .angle-band-outer-line');
+    var outerFrame=doc.getElementById('outerBlackFrame');
+    if(!angleLine||!outerFrame)return false;
+
+    var mediumLines=outerFrame.querySelectorAll('.outer-gold-line.medium');
+    if(mediumLines.length!==2)return false;
+
+    var r0=Number(mediumLines[0].getAttribute('r'));
+    var r1=Number(mediumLines[1].getAttribute('r'));
+    if(!Number.isFinite(r0)||!Number.isFinite(r1))return false;
+
+    var nearestGoldLine=r0<r1?mediumLines[0]:mediumLines[1];
+    var view=doc.defaultView;
+    var referenceStroke=nearestGoldLine.style.getPropertyValue('stroke')
+      ||nearestGoldLine.getAttribute('stroke')
+      ||(view&&view.getComputedStyle?view.getComputedStyle(nearestGoldLine).stroke:'');
+    if(!referenceStroke||referenceStroke==='none')return false;
+
+    var geometryBefore=geometrySignature(angleLine);
+    var oldStroke=angleLine.style.getPropertyValue('stroke')||angleLine.getAttribute('stroke')||'';
+
+    angleLine.setAttribute('stroke',referenceStroke);
+    angleLine.style.setProperty('stroke',referenceStroke,'important');
+    angleLine.setAttribute('data-v38-color-source','nearest-inner-medium-gold-line');
+
+    var geometryAfter=geometrySignature(angleLine);
+
+    doc.documentElement.dataset.angleBorderGoldColorOnlyV38='true';
+    doc.documentElement.dataset.angleBorderGoldReferenceStroke=referenceStroke;
+    doc.documentElement.dataset.angleBorderGeometryChanged=String(geometryBefore!==geometryAfter);
+
+    if(view){
+      view.__auditKawkabatAngleBorderGoldColorOnlyV38=function(){
+        var applied=angleLine.style.getPropertyValue('stroke')===referenceStroke;
+        return{
+          ok:applied&&geometryBefore===geometryAfter,
+          changedArea:'angle-band-outer-line-stroke-color-only',
+          previousStroke:oldStroke,
+          unifiedStroke:referenceStroke,
+          colorSource:'nearest-inner-medium-gold-line',
+          geometryChanged:geometryBefore!==geometryAfter,
+          strokeWidthChanged:false,
+          radiusChanged:false,
+          positionChanged:false,
+          opacityChanged:false,
+          filterChanged:false,
+          outerGoldLinesChanged:false,
+          ornamentsChanged:false,
+          angleTicksChanged:false,
+          angleLabelsChanged:false,
+          zodiacChanged:false,
+          wheelNumbersChanged:false,
+          innerWheelGeometryChanged:false
+        };
+      };
+    }
+    return true;
+  }catch(error){
+    return false;
+  }
+}
+
+function start(){
+  if(poll)clearInterval(poll);
+  var attempts=0;
+  poll=setInterval(function(){
+    attempts+=1;
+    if(applyAngleBorderGoldColorOnly()||attempts>=1800){
+      clearInterval(poll);
+      poll=null;
+    }
+  },100);
+}
+
+frame.addEventListener('load',start);
+start();
+}());
+</script>
+</body>
+</html>

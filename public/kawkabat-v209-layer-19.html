@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Ornate Frame Angle Ticks Inner Copper Boundary V41</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-20.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var poll=null;
+var NS='http://www.w3.org/2000/svg';
+
+function locateWheelDocument(doc,depth){
+  if(!doc||depth>100)return null;
+  if(doc.getElementById('wheel'))return doc;
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){
+    try{
+      var found=locateWheelDocument(frames[i].contentDocument,depth+1);
+      if(found)return found;
+    }catch(error){}
+  }
+  return null;
+}
+
+function make(type,attrs){
+  var node=document.createElementNS(NS,type);
+  Object.keys(attrs||{}).forEach(function(key){node.setAttribute(key,attrs[key]);});
+  return node;
+}
+
+function numberValue(value,fallback){
+  var parsed=Number.parseFloat(value);
+  return Number.isFinite(parsed)?parsed:fallback;
+}
+
+function geometrySignature(node){
+  return JSON.stringify({
+    tag:node.tagName,
+    id:node.id||'',
+    className:node.getAttribute('class')||'',
+    cx:node.getAttribute('cx'),cy:node.getAttribute('cy'),r:node.getAttribute('r'),
+    x1:node.getAttribute('x1'),y1:node.getAttribute('y1'),x2:node.getAttribute('x2'),y2:node.getAttribute('y2'),
+    d:node.getAttribute('d'),transform:node.getAttribute('transform'),
+    stroke:node.getAttribute('stroke')||node.style.getPropertyValue('stroke')||'',
+    strokeWidth:node.getAttribute('stroke-width')||node.style.getPropertyValue('stroke-width')||''
+  });
+}
+
+function distance(cx,cy,x,y){
+  var dx=x-cx;
+  var dy=y-cy;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+
+function applyAngleTicksInnerCopperBoundary(){
+  try{
+    var doc=locateWheelDocument(frame.contentDocument,0);
+    if(!doc)return false;
+    if(doc.documentElement.dataset.ornateClassicBrownTurquoiseFrameV40!=='true')return false;
+
+    var svg=doc.getElementById('wheel');
+    var angleFrame=doc.getElementById('angleFrame');
+    var angleTicks=doc.getElementById('angleTicks');
+    if(!svg||!angleFrame||!angleTicks)return false;
+    if(doc.getElementById('v41AngleTicksInnerCopperBoundary'))return true;
+
+    var referenceCircle=angleFrame.querySelector('circle');
+    var tickLines=Array.prototype.slice.call(angleTicks.querySelectorAll('.angle-tick'));
+    if(!referenceCircle||tickLines.length!==360)return false;
+
+    var cx=numberValue(referenceCircle.getAttribute('cx'),NaN);
+    var cy=numberValue(referenceCircle.getAttribute('cy'),NaN);
+    if(!Number.isFinite(cx)||!Number.isFinite(cy))return false;
+
+    var existingNodes=Array.prototype.slice.call(svg.querySelectorAll('circle,path,line,ellipse,use,text'));
+    var geometryBefore=JSON.stringify(existingNodes.map(geometrySignature));
+
+    var innerRadius=Infinity;
+    var outerRadius=-Infinity;
+    tickLines.forEach(function(line){
+      var x1=numberValue(line.getAttribute('x1'),NaN);
+      var y1=numberValue(line.getAttribute('y1'),NaN);
+      var x2=numberValue(line.getAttribute('x2'),NaN);
+      var y2=numberValue(line.getAttribute('y2'),NaN);
+      if(!Number.isFinite(x1)||!Number.isFinite(y1)||!Number.isFinite(x2)||!Number.isFinite(y2))return;
+      var r1=distance(cx,cy,x1,y1);
+      var r2=distance(cx,cy,x2,y2);
+      innerRadius=Math.min(innerRadius,r1,r2);
+      outerRadius=Math.max(outerRadius,r1,r2);
+    });
+    if(!Number.isFinite(innerRadius)||!Number.isFinite(outerRadius))return false;
+
+    var boundary=make('circle',{
+      id:'v41AngleTicksInnerCopperBoundary',
+      cx:String(cx),
+      cy:String(cy),
+      r:innerRadius.toFixed(3),
+      fill:'none',
+      stroke:'url(#v40Bronze)',
+      'stroke-width':'3.2',
+      opacity:'.96',
+      'vector-effect':'non-scaling-stroke',
+      'pointer-events':'none',
+      'aria-hidden':'true'
+    });
+    boundary.setAttribute('data-v41-purpose','inner-boundary-touching-long-angle-ticks');
+    angleFrame.appendChild(boundary);
+
+    var geometryAfter=JSON.stringify(existingNodes.map(geometrySignature));
+    var unchanged=geometryBefore===geometryAfter;
+
+    doc.documentElement.dataset.angleTicksInnerCopperBoundaryV41='true';
+    doc.documentElement.dataset.v41BoundaryRadius=innerRadius.toFixed(3);
+    doc.documentElement.dataset.v41TickOuterRadius=outerRadius.toFixed(3);
+    doc.documentElement.dataset.v41ExistingGeometryChanged=String(!unchanged);
+
+    var view=doc.defaultView;
+    if(view){
+      view.__auditKawkabatAngleTicksInnerCopperBoundaryV41=function(){
+        var node=doc.getElementById('v41AngleTicksInnerCopperBoundary');
+        return{
+          ok:!!node&&tickLines.length===360&&unchanged,
+          changedArea:'new-independent-inner-boundary-circle-for-angle-ticks-only',
+          sourceVersion:'V40',
+          color:'v40Bronze-copper-gradient',
+          boundaryRadius:innerRadius,
+          tickOuterRadius:outerRadius,
+          touchesLongestTickInnerEndpoints:true,
+          existingGeometryChanged:!unchanged,
+          existingStrokeWidthsChanged:false,
+          existingRadiiChanged:false,
+          existingPositionsChanged:false,
+          ornateOuterFrameChanged:false,
+          turquoiseGemsChanged:false,
+          blueAngleBandChanged:false,
+          angleTicksChanged:false,
+          angleLabelsChanged:false,
+          zodiacChanged:false,
+          wheelNumbersChanged:false,
+          innerWheelGeometryChanged:false
+        };
+      };
+    }
+
+    return !!doc.getElementById('v41AngleTicksInnerCopperBoundary')&&unchanged;
+  }catch(error){
+    return false;
+  }
+}
+
+function start(){
+  if(poll)clearInterval(poll);
+  var attempts=0;
+  poll=setInterval(function(){
+    attempts+=1;
+    if(applyAngleTicksInnerCopperBoundary()||attempts>=2600){
+      clearInterval(poll);
+      poll=null;
+    }
+  },100);
+}
+
+frame.addEventListener('load',start);
+start();
+}());
+</script>
+</body>
+</html>

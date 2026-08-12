@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — V21 + Clear 5 Degree Ticks + Gold 5/15/25/35 Labels V22</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-34.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+
+    var appFrame=document.getElementById('appFrame');
+    var poll=null;
+
+    function locateWheelDocument(doc,depth){
+      if(!doc||depth>26)return null;
+      if(doc.getElementById('wheel'))return doc;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i+=1){
+        try{
+          var found=locateWheelDocument(frames[i].contentDocument,depth+1);
+          if(found)return found;
+        }catch(error){}
+      }
+      return null;
+    }
+
+    function parseAngleLabel(text){
+      var match=String(text||'').match(/^(\d+)°$/);
+      return match?Number(match[1]):null;
+    }
+
+    function applyFiveDegreePolish(){
+      try{
+        var wheelDoc=locateWheelDocument(appFrame.contentDocument,0);
+        if(!wheelDoc)return false;
+
+        var angleTicks=wheelDoc.getElementById('angleTicks');
+        var labels=wheelDoc.querySelectorAll('.angle-label');
+        if(!angleTicks||!labels.length)return false;
+
+        var ticks=angleTicks.querySelectorAll('line.angle-tick');
+        if(ticks.length!==360)return false;
+
+        var fiveCount=0;
+        ticks.forEach(function(tick,index){
+          if(index%10===5){
+            tick.setAttribute('data-v22-five-degree','true');
+            tick.setAttribute('stroke-width','2.55');
+            tick.style.setProperty('stroke','#241712','important');
+            tick.style.setProperty('opacity','0.98','important');
+            tick.style.setProperty('stroke-linecap','round','important');
+            tick.style.setProperty('vector-effect','non-scaling-stroke','important');
+            fiveCount+=1;
+          }
+        });
+
+        var goldCount=0;
+        labels.forEach(function(label){
+          var degree=parseAngleLabel(label.textContent);
+          if(degree===null)return;
+          if(degree%10===5){
+            label.setAttribute('data-v22-gold-angle','true');
+            label.style.setProperty('fill','#D7B15A','important');
+            label.style.setProperty('stroke','#6C4516','important');
+            label.style.setProperty('stroke-width','1.0','important');
+            label.style.setProperty('paint-order','stroke fill','important');
+            label.style.setProperty('font-weight','900','important');
+            goldCount+=1;
+          }
+        });
+
+        wheelDoc.documentElement.dataset.fiveDegreeTicksClearV22='true';
+        wheelDoc.documentElement.dataset.fiveDegreeTickCount=String(fiveCount);
+        wheelDoc.documentElement.dataset.fiveDegreeTickStrokeWidth='2.55';
+        wheelDoc.documentElement.dataset.fiveDegreeGoldLabelCount=String(goldCount);
+        wheelDoc.documentElement.dataset.fiveDegreeLabelPositionChanged='false';
+        wheelDoc.documentElement.dataset.fiveDegreeTickPositionChanged='false';
+
+        if(wheelDoc.defaultView){
+          wheelDoc.defaultView.__auditKawkabatFiveDegreeClearGoldV22=function(){
+            return{
+              ok:fiveCount===36&&goldCount===36,
+              changedArea:'5-degree-tick-clarity-and-5/15/25/35-label-color-only',
+              fiveDegreeTickCount:fiveCount,
+              fiveDegreeLabelCount:goldCount,
+              fiveDegreeTickStrokeWidth:'2.55',
+              labelFill:'#D7B15A',
+              labelStroke:'#6C4516',
+              tickPositionChanged:false,
+              labelPositionChanged:false,
+              angleBandChanged:false,
+              outerFrameChanged:false,
+              zodiacChanged:false,
+              wheelNumbersChanged:false,
+              valuesChanged:false
+            };
+          };
+        }
+
+        return fiveCount===36&&goldCount===36;
+      }catch(error){
+        return false;
+      }
+    }
+
+    function startPolling(){
+      if(poll)clearInterval(poll);
+      var attempts=0;
+      poll=setInterval(function(){
+        attempts+=1;
+        if(applyFiveDegreePolish()||attempts>=900){
+          clearInterval(poll);
+          poll=null;
+        }
+      },100);
+    }
+
+    appFrame.addEventListener('load',startPolling);
+    startPolling();
+  }());
+  </script>
+</body>
+</html>

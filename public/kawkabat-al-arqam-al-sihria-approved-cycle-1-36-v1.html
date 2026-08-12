@@ -15,8 +15,8 @@
   <script>
   (async function(){
     'use strict';
-    var approvedApi='https://api.github.com/repos/saloqbi/TasiGanzilla/git/blobs/d9af47f4be4649f4bb687fc937476c40a9b1c54a';
-    var wheelUrl='https://htmlpreview.github.io/?https://github.com/saloqbi/TasiGanzilla/blob/b26b6f1c20159d557c71980a2004fd161e486692/public/kawkabat-wheel-approved-cycle-1-36-v1.html';
+    var approvedApi='https://api.github.com/repos/saloqbi/KawkabatSeherAlarqam/git/blobs/d9af47f4be4649f4bb687fc937476c40a9b1c54a';
+    var wheelUrl='https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-wheel-approved-cycle-1-36-v1.html';
     function decodeBase64(value){var binary=atob(String(value||'').replace(/\s/g,'')),bytes=new Uint8Array(binary.length);for(var i=0;i<binary.length;i+=1)bytes[i]=binary.charCodeAt(i);return new TextDecoder('utf-8').decode(bytes);}
     try{
       var response=await fetch(approvedApi,{cache:'no-store',headers:{Accept:'application/vnd.github+json'}});

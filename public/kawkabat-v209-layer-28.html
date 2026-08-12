@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — V26 + Brown Angle Outer Line Thicker Outward V27</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-29.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+
+    var appFrame=document.getElementById('appFrame');
+    var poll=null;
+    var STROKE_INCREASE=6;
+    var RADIUS_INCREASE=3;
+
+    function locateWheelDocument(doc,depth){
+      if(!doc||depth>34)return null;
+      if(doc.getElementById('wheel'))return doc;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i+=1){
+        try{
+          var found=locateWheelDocument(frames[i].contentDocument,depth+1);
+          if(found)return found;
+        }catch(error){}
+      }
+      return null;
+    }
+
+    function applyBrownOuterLineThickerOutward(){
+      try{
+        var wheelDoc=locateWheelDocument(appFrame.contentDocument,0);
+        if(!wheelDoc)return false;
+        if(wheelDoc.documentElement.dataset.highContrastOutwardTicksV26!=='true')return false;
+
+        var line=wheelDoc.querySelector('#angleFrame .angle-band-outer-line');
+        if(!line)return false;
+
+        var originalRadius=line.getAttribute('data-v27-original-radius');
+        var originalWidth=line.getAttribute('data-v27-original-width');
+
+        if(originalRadius==null){
+          originalRadius=line.getAttribute('r');
+          line.setAttribute('data-v27-original-radius',originalRadius);
+        }
+
+        if(originalWidth==null){
+          var computed=wheelDoc.defaultView&&wheelDoc.defaultView.getComputedStyle
+            ?wheelDoc.defaultView.getComputedStyle(line).strokeWidth
+            :'';
+          originalWidth=parseFloat(computed)||6.5;
+          line.setAttribute('data-v27-original-width',String(originalWidth));
+        }
+
+        var baseRadius=Number(originalRadius);
+        var baseWidth=Number(originalWidth);
+        if(!Number.isFinite(baseRadius)||!Number.isFinite(baseWidth))return false;
+
+        var newRadius=baseRadius+RADIUS_INCREASE;
+        var newWidth=baseWidth+STROKE_INCREASE;
+
+        line.setAttribute('r',String(newRadius));
+        line.style.setProperty('stroke-width',newWidth+'px','important');
+        line.setAttribute('data-v27-brown-angle-outer-line','true');
+
+        wheelDoc.documentElement.dataset.brownAngleOuterLineThickerV27='true';
+        wheelDoc.documentElement.dataset.brownAngleOuterLineRadiusBefore=String(baseRadius);
+        wheelDoc.documentElement.dataset.brownAngleOuterLineRadiusAfter=String(newRadius);
+        wheelDoc.documentElement.dataset.brownAngleOuterLineWidthBefore=String(baseWidth);
+        wheelDoc.documentElement.dataset.brownAngleOuterLineWidthAfter=String(newWidth);
+        wheelDoc.documentElement.dataset.brownAngleOuterLineInnerEdgeChanged='false';
+
+        if(wheelDoc.defaultView){
+          wheelDoc.defaultView.__auditKawkabatBrownAngleOuterLineThickerV27=function(){
+            return{
+              ok:line.getAttribute('data-v27-brown-angle-outer-line')==='true',
+              changedArea:'brown-copper-angle-outer-line-only',
+              radiusBefore:baseRadius,
+              radiusAfter:newRadius,
+              strokeWidthBefore:baseWidth,
+              strokeWidthAfter:newWidth,
+              strokeIncrease:STROKE_INCREASE,
+              radiusIncrease:RADIUS_INCREASE,
+              expansionDirection:'outward-only',
+              innerEdgeChanged:false,
+              blueSilverLineChanged:false,
+              outerBlackFrameChanged:false,
+              angleTicksChanged:false,
+              angleLabelsChanged:false,
+              zodiacChanged:false,
+              wheelNumbersChanged:false,
+              valuesChanged:false
+            };
+          };
+        }
+
+        return true;
+      }catch(error){
+        return false;
+      }
+    }
+
+    function startPolling(){
+      if(poll)clearInterval(poll);
+      var attempts=0;
+      poll=setInterval(function(){
+        attempts+=1;
+        if(applyBrownOuterLineThickerOutward()||attempts>=1200){
+          clearInterval(poll);
+          poll=null;
+        }
+      },100);
+    }
+
+    appFrame.addEventListener('load',startPolling);
+    startPolling();
+  }());
+  </script>
+</body>
+</html>

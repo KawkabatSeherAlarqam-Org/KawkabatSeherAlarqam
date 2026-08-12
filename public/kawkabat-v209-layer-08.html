@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Pencil Drawing Tools V64</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" allowfullscreen src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-09.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var timer=null;
+var loadingDocs=new WeakSet();
+var SCRIPT_URL='https://cdn.jsdelivr.net/gh/saloqbi/KawkabatSeherAlarqam@main/src/components/GannTools/gannzillaTopCenterDrawingToolbarV471.js';
+var TRIGGER_ID='gannzilla-top-center-drawing-trigger-v471';
+var TOOLBAR_ID='gannzilla-top-center-drawing-toolbar-v471';
+
+function visit(doc,callback,depth){
+  if(!doc||depth>180)return;
+  callback(doc);
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){
+    try{visit(frames[i].contentDocument,callback,depth+1);}catch(error){}
+  }
+}
+
+function findBar(){
+  var found=null;
+  try{
+    visit(frame.contentDocument,function(doc){
+      if(found)return;
+      var bar=doc.getElementById('v62MetalBar');
+      if(bar)found={doc:doc,bar:bar};
+    },0);
+  }catch(error){}
+  return found;
+}
+
+function findDrawingDocument(){
+  var best=null;
+  try{
+    visit(frame.contentDocument,function(doc){
+      if(best)return;
+      var trigger=doc.getElementById(TRIGGER_ID);
+      if(trigger){best=doc;return;}
+      var canvases=doc.querySelectorAll('canvas');
+      for(var i=0;i<canvases.length;i+=1){
+        var canvas=canvases[i];
+        if(canvas.closest&&canvas.closest('aside'))continue;
+        var rect=canvas.getBoundingClientRect();
+        if(canvas.width>300&&canvas.height>300&&rect.width>250&&rect.height>250){best=doc;return;}
+      }
+    },0);
+  }catch(error){}
+  return best;
+}
+
+function ensureMetalStyle(doc){
+  if(doc.getElementById('v64PencilStyle'))return;
+  var style=doc.createElement('style');
+  style.id='v64PencilStyle';
+  style.textContent=''
+    +'#v64PencilBtn{width:32px;min-width:32px;height:30px;padding:0;margin:0;border:1px solid #95a2ac;border-top-color:#dce2e7;border-left-color:#dce2e7;border-radius:3px;background:linear-gradient(180deg,#fff 0%,#edf3f7 46%,#d5dfe7 52%,#fbfcfd 100%);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.97)}'
+    +'#v64PencilBtn:hover,#v64PencilBtn[data-open="true"]{background:linear-gradient(180deg,#fff8ea 0%,#f3e5c3 46%,#e2c382 52%,#fff5e5 100%);border-color:#b88a4a}'
+    +'#v64PencilBtn svg{width:20px;height:20px;display:block;pointer-events:none}'
+    +'#v64PencilBtn .body{fill:#d9af42;stroke:#866716;stroke-width:.8}'
+    +'#v64PencilBtn .wood{fill:#e6bd91;stroke:#9b704d;stroke-width:.6}'
+    +'#v64PencilBtn .lead{fill:#3c4650}'
+    +'#v64PencilDivider{width:1px;height:24px;margin:0 2px;background:#96a2ab;box-shadow:1px 0 0 rgba(255,255,255,.78)}';
+  doc.head.appendChild(style);
+}
+
+function pencilMarkup(){
+  return '<svg viewBox="0 0 24 24" aria-hidden="true">'
+    +'<path class="body" d="M4.1 16.8 15.8 5.1l3.1 3.1L7.2 19.9l-4.2 1.2z"/>'
+    +'<path class="wood" d="m3 21.1 1.1-4.3 3.1 3.1z"/>'
+    +'<path class="lead" d="m3 21.1.5-2 1.5 1.5z"/>'
+    +'<path d="m14.9 6 3.1 3.1" fill="none" stroke="#f7df85" stroke-width="1"/>'
+    +'</svg>';
+}
+
+function updateButton(button){
+  var drawingDoc=findDrawingDocument();
+  var toolbar=drawingDoc&&drawingDoc.getElementById(TOOLBAR_ID);
+  var open=!!(toolbar&&!toolbar.hidden&&getComputedStyle(toolbar).display!=='none');
+  button.setAttribute('data-open',open?'true':'false');
+  button.title=open?'Hide drawing tools':'Show drawing tools';
+  button.setAttribute('aria-label',button.title);
+}
+
+function prepareDocumentUrl(doc){
+  try{
+    var url=new URL(doc.defaultView.location.href);
+    url.searchParams.set('gannzillaPro','true');
+    url.searchParams.set('wheelPro','true');
+    url.searchParams.set('showTopCenterDrawingToolbar','true');
+    url.searchParams.set('topDrawingToolbarOpen','false');
+    doc.defaultView.history.replaceState(doc.defaultView.history.state,'',url.pathname+url.search+url.hash);
+  }catch(error){}
+}
+
+function hideNativeTrigger(doc){
+  if(doc.getElementById('v64HideNativeDrawingTrigger'))return;
+  var style=doc.createElement('style');
+  style.id='v64HideNativeDrawingTrigger';
+  style.textContent='#'+TRIGGER_ID+'{display:none!important;visibility:hidden!important;pointer-events:none!important}';
+  doc.head.appendChild(style);
+}
+
+function toggleDrawingTools(button){
+  var doc=findDrawingDocument();
+  if(!doc)return;
+  var trigger=doc.getElementById(TRIGGER_ID);
+  if(trigger){
+    trigger.click();
+    setTimeout(function(){updateButton(button);},40);
+    return;
+  }
+  if(loadingDocs.has(doc))return;
+  loadingDocs.add(doc);
+  prepareDocumentUrl(doc);
+  hideNativeTrigger(doc);
+  var script=doc.createElement('script');
+  script.src=SCRIPT_URL;
+  script.async=true;
+  script.onload=function(){
+    loadingDocs.delete(doc);
+    var attempts=0;
+    var poll=setInterval(function(){
+      attempts+=1;
+      var loadedTrigger=doc.getElementById(TRIGGER_ID);
+      if(loadedTrigger){
+        clearInterval(poll);
+        hideNativeTrigger(doc);
+        loadedTrigger.click();
+        setTimeout(function(){updateButton(button);},60);
+      }else if(attempts>=100){
+        clearInterval(poll);
+      }
+    },50);
+  };
+  script.onerror=function(){loadingDocs.delete(doc);};
+  doc.head.appendChild(script);
+}
+
+function install(){
+  var info=findBar();
+  if(!info)return false;
+  ensureMetalStyle(info.doc);
+  var button=info.doc.getElementById('v64PencilBtn');
+  if(!button){
+    var divider=info.doc.createElement('span');
+    divider.id='v64PencilDivider';
+    var btn=info.doc.createElement('button');
+    btn.id='v64PencilBtn';
+    btn.type='button';
+    btn.title='Show drawing tools';
+    btn.setAttribute('aria-label',btn.title);
+    btn.innerHTML=pencilMarkup();
+    btn.addEventListener('click',function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      toggleDrawingTools(btn);
+    });
+    var zoom=info.doc.getElementById('v63ZoomGroup');
+    if(zoom){
+      info.bar.insertBefore(divider,zoom);
+      info.bar.insertBefore(btn,zoom);
+    }else{
+      info.bar.insertBefore(divider,info.bar.firstChild);
+      info.bar.insertBefore(btn,divider.nextSibling);
+    }
+    button=btn;
+  }
+  updateButton(button);
+  try{
+    info.doc.defaultView.__auditKawkabatPencilDrawingToolsV64=function(){
+      var drawingDoc=findDrawingDocument();
+      return{
+        ok:!!info.doc.getElementById('v64PencilBtn'),
+        sourceVersion:'V63',
+        pencilButtonPresent:true,
+        drawingRuntimeLoaded:!!(drawingDoc&&drawingDoc.getElementById(TRIGGER_ID)),
+        drawingToolbarPresent:!!(drawingDoc&&drawingDoc.getElementById(TOOLBAR_ID)),
+        originalMetalToolbarKept:true,
+        zoomKept:!!info.doc.getElementById('v63ZoomGroup'),
+        connectionKept:!!info.doc.getElementById('v62ConnectionBtn'),
+        fullscreenKept:!!info.doc.getElementById('v62FullscreenBtn'),
+        languageKept:!!info.doc.getElementById('v62Language'),
+        wheelGeometryChanged:false,
+        ornateFrameChanged:false
+      };
+    };
+  }catch(error){}
+  return true;
+}
+
+function start(){
+  if(timer)clearInterval(timer);
+  timer=setInterval(install,300);
+  install();
+}
+frame.addEventListener('load',start);
+start();
+}());
+</script>
+</body>
+</html>

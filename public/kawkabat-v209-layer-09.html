@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Metal Toolbar Zoom 50–400 V63</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" allowfullscreen src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-10.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var MIN=50,MAX=400,STEP=5,STORAGE='tasi-gannzilla-wheel-zoom-v63';
+var current=100,timer=null,currentTarget=null;
+var bases=new WeakMap();
+
+function visit(doc,callback,depth){
+  if(!doc||depth>180)return;
+  callback(doc);
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){try{visit(frames[i].contentDocument,callback,depth+1);}catch(error){}}
+}
+
+function clamp(value){
+  var n=Number(value);
+  if(!Number.isFinite(n))n=100;
+  n=Math.round(n/STEP)*STEP;
+  return Math.max(MIN,Math.min(MAX,n));
+}
+
+function readStored(){
+  var result=null;
+  try{visit(frame.contentDocument,function(doc){if(result!==null)return;try{var v=Number(doc.defaultView.localStorage.getItem(STORAGE));if(Number.isFinite(v))result=clamp(v);}catch(error){}},0);}catch(error){}
+  return result===null?100:result;
+}
+
+function writeStored(value){
+  try{visit(frame.contentDocument,function(doc){try{doc.defaultView.localStorage.setItem(STORAGE,String(value));}catch(error){}},0);}catch(error){}
+}
+
+function findBar(){
+  var found=null;
+  try{visit(frame.contentDocument,function(doc){if(found)return;var bar=doc.getElementById('v62MetalBar');if(bar)found={doc:doc,bar:bar};},0);}catch(error){}
+  return found;
+}
+
+function findWheelTarget(){
+  var best=null;
+  try{
+    visit(frame.contentDocument,function(doc){
+      if(best)return;
+      var wheel=doc.getElementById('wheel');
+      if(wheel){
+        var tag=String(wheel.tagName||'').toLowerCase();
+        var target=(tag==='g'||tag==='path')?(wheel.closest('svg')||wheel):wheel;
+        var rect=target.getBoundingClientRect();
+        if(rect.width>100&&rect.height>100)best={doc:doc,target:target};
+      }
+    },0);
+    if(best)return best;
+    visit(frame.contentDocument,function(doc){
+      var canvases=doc.querySelectorAll('canvas');
+      for(var i=0;i<canvases.length;i+=1){
+        if(canvases[i].closest&&canvases[i].closest('aside'))continue;
+        var rect=canvases[i].getBoundingClientRect();
+        var area=rect.width*rect.height;
+        if(rect.width>250&&rect.height>250&&(!best||area>best.area))best={doc:doc,target:canvases[i],area:area};
+      }
+    },0);
+  }catch(error){}
+  return best;
+}
+
+function ensureStyle(doc){
+  if(doc.getElementById('v63ZoomStyles'))return;
+  var style=doc.createElement('style');
+  style.id='v63ZoomStyles';
+  style.textContent=''
+    +'#v63ZoomGroup{display:inline-flex;align-items:stretch;height:30px;direction:ltr;}'
+    +'#v63ZoomOut,#v63ZoomIn{width:32px;min-width:32px;height:30px;margin:0;padding:4px;border:1px solid #95a2ac;background:linear-gradient(180deg,#fff 0%,#edf3f7 46%,#d5dfe7 52%,#fbfcfd 100%);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.97)}'
+    +'#v63ZoomOut{border-radius:3px 0 0 3px;border-right:0}'
+    +'#v63ZoomIn{border-radius:0 3px 3px 0;border-left:0}'
+    +'#v63ZoomOut:hover,#v63ZoomIn:hover{background:linear-gradient(180deg,#fff8ea 0%,#f3e5c3 46%,#e2c382 52%,#fff5e5 100%);border-color:#b88a4a}'
+    +'#v63ZoomOut:disabled,#v63ZoomIn:disabled{opacity:.42;cursor:default}'
+    +'#v63ZoomOut svg,#v63ZoomIn svg{width:19px;height:19px;display:block;pointer-events:none}'
+    +'#v63ZoomSelect{width:58px;min-width:58px;height:30px;margin:0;padding:0 3px;border:1px solid #95a2ac;border-radius:0;background:linear-gradient(180deg,#fff 0%,#edf3f7 46%,#d5dfe7 52%,#fbfcfd 100%);color:#202b34;font:700 13px Arial,Tahoma,sans-serif;text-align:center;text-align-last:center;cursor:pointer;appearance:none;-webkit-appearance:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.97)}'
+    +'#v63ZoomSelect:focus{outline:2px solid #2a8ad4;outline-offset:-2px}';
+  doc.head.appendChild(style);
+}
+
+function magnifier(plus){
+  return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9.2" cy="9.2" r="5.7" fill="#fbfdff" stroke="#3579ad" stroke-width="1.45"/><path d="M13.4 13.4 20 20" fill="none" stroke="#3579ad" stroke-width="2" stroke-linecap="round"/><path d="M6.3 9.2h5.8" fill="none" stroke="#2469a2" stroke-width="1.55"/>'+(plus?'<path d="M9.2 6.3v5.8" fill="none" stroke="#2469a2" stroke-width="1.55"/>':'')+'</svg>';
+}
+
+function populate(select){
+  select.replaceChildren();
+  for(var p=MIN;p<=MAX;p+=STEP){var option=select.ownerDocument.createElement('option');option.value=String(p);option.textContent=p+'%';select.appendChild(option);}
+  select.value=String(current);
+}
+
+function syncControls(doc){
+  var select=doc.getElementById('v63ZoomSelect');
+  var out=doc.getElementById('v63ZoomOut');
+  var zoomIn=doc.getElementById('v63ZoomIn');
+  if(select)select.value=String(current);
+  if(out)out.disabled=current<=MIN;
+  if(zoomIn)zoomIn.disabled=current>=MAX;
+}
+
+function applyZoom(value,source){
+  current=clamp(value);
+  writeStored(current);
+  var barInfo=findBar();
+  if(barInfo)syncControls(barInfo.doc);
+  var info=findWheelTarget();
+  if(!info||!info.target)return false;
+  var target=info.target;
+  currentTarget=target;
+  var ratio=current/100;
+  var base=bases.get(target);
+  if(!base){
+    var rect=target.getBoundingClientRect();
+    base={width:Math.max(1,rect.width/ratio),height:Math.max(1,rect.height/ratio)};
+    bases.set(target,base);
+  }
+  target.style.setProperty('width',(base.width*ratio)+'px','important');
+  target.style.setProperty('height',(base.height*ratio)+'px','important');
+  target.style.setProperty('max-width','none','important');
+  target.style.setProperty('max-height','none','important');
+  target.dataset.v63ZoomPercent=String(current);
+  try{info.doc.defaultView.dispatchEvent(new CustomEvent('gannzilla:wheel-zoom-v63',{detail:{percent:current,zoom:ratio,source:source||'control',min:MIN,max:MAX,step:STEP}}));}catch(error){}
+  return true;
+}
+
+function createControl(info){
+  var doc=info.doc,bar=info.bar;
+  ensureStyle(doc);
+  var existing=doc.getElementById('v63ZoomGroup');
+  if(existing)return existing;
+  var group=doc.createElement('div');group.id='v63ZoomGroup';group.setAttribute('role','group');group.setAttribute('aria-label','Wheel zoom');
+  var out=doc.createElement('button');out.id='v63ZoomOut';out.type='button';out.title='Zoom out';out.innerHTML=magnifier(false);out.addEventListener('click',function(){applyZoom(current-STEP,'minus');});
+  var select=doc.createElement('select');select.id='v63ZoomSelect';select.title='Wheel zoom';populate(select);select.addEventListener('change',function(){applyZoom(Number(select.value),'select');});
+  var zoomIn=doc.createElement('button');zoomIn.id='v63ZoomIn';zoomIn.type='button';zoomIn.title='Zoom in';zoomIn.innerHTML=magnifier(true);zoomIn.addEventListener('click',function(){applyZoom(current+STEP,'plus');});
+  group.append(out,select,zoomIn);
+  var connection=doc.getElementById('v62ConnectionBtn');
+  if(connection)bar.insertBefore(group,connection);else bar.insertBefore(group,bar.firstChild);
+  syncControls(doc);
+  return group;
+}
+
+function install(){
+  var info=findBar();
+  if(!info)return false;
+  current=readStored();
+  createControl(info);
+  applyZoom(current,'install');
+  try{info.doc.defaultView.__auditKawkabatMetalZoomV63=function(){return{ok:!!info.doc.getElementById('v63ZoomGroup'),sourceVersion:'V62',minPercent:MIN,maxPercent:MAX,stepPercent:STEP,currentPercent:current,zoomApplied:!!currentTarget,connectionKept:!!info.doc.getElementById('v62ConnectionBtn'),fullscreenKept:!!info.doc.getElementById('v62FullscreenBtn'),languageKept:!!info.doc.getElementById('v62Language'),wheelGeometryChanged:false,ornateFrameChanged:false};};}catch(error){}
+  return true;
+}
+
+function start(){if(timer)clearInterval(timer);timer=setInterval(install,300);install();}
+frame.addEventListener('load',start);start();
+}());
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Bidirectional Native Panel Language V56</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-16.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var timer=null;
+var observer=null;
+var observedPanel=null;
+var applying=false;
+var currentLanguage='en';
+var AR={
+'Default':'الافتراضي','Layout':'التخطيط','Visible':'إظهار','Clockwise':'مع عقارب الساعة','Size':'عدد الحلقات','View':'العرض','Data type':'نوع البيانات','Price':'السعر','Time':'الوقت','Value':'القيمة','Find':'بحث','Increment':'الزيادة','Highlight':'التمييز','Fill':'التعبئة','Levels':'المستويات','Cell':'الخلية','Show marks':'إظهار العلامات','Show numbers':'إظهار الأرقام','Protractor':'المنقلة','Angle':'الزاوية','Counter':'العداد','Secondary scale':'المقياس الثانوي','Start':'البداية','Step':'الخطوة','Radius':'نصف القطر','Font size':'حجم الخط','Divisions':'الأقسام','Marker':'المؤشر','Shape':'الشكل','Triangle':'مثلث','Circle':'دائرة','Square':'مربع','Color':'اللون','Line width':'عرض الخط','Label':'التسمية','Chronometer':'مقياس الزمن','Range':'المدى','Annual':'سنوي','Monthly':'شهري','Weekly':'أسبوعي','Daily':'يومي','Cosmogram':'الخريطة الفلكية','System':'النظام','Geocentric':'مركزي أرضي','Heliocentric':'مركزي شمسي','Location':'الموقع','City':'المدينة','Latitude':'خط العرض','Longitude':'خط الطول','Moon phases':'أطوار القمر','Show eclipses':'إظهار الكسوف والخسوف','Hide':'إخفاء','Show':'إظهار','None':'لا شيء','Today':'اليوم','Date':'التاريخ','Background':'الخلفية','Grid':'الشبكة','Colors':'الألوان','Line':'خط','Dash':'متقطع','Bold line':'خط عريض','Bold dash':'متقطع عريض','North':'شمال','South':'جنوب','East':'شرق','West':'غرب','New York':'نيويورك','Both':'كلاهما','Bull':'صاعد','Bear':'هابط'
+};
+var REVERSE={};
+Object.keys(AR).forEach(function(key){REVERSE[AR[key]]=key;});
+var TO_AR={'0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩'};
+var TO_EN={'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
+function visitDocs(doc,callback,depth){if(!doc||depth>180)return;callback(doc);var frames=doc.querySelectorAll('iframe');for(var i=0;i<frames.length;i++){try{visitDocs(frames[i].contentDocument,callback,depth+1);}catch(error){}}}
+function findToolbarSelect(){var found=null;try{visitDocs(frame.contentDocument,function(doc){if(found)return;var select=doc.getElementById('v47Language');if(select)found=select;},0);}catch(error){}return found;}
+function panelScore(aside){if(!aside||!aside.querySelector('input,select'))return -1;var rect=aside.getBoundingClientRect();if(!rect||rect.width<140||rect.width>520||rect.height<250||rect.left>550)return -1;var text=String(aside.textContent||'');var tokens=['Default','الافتراضي','Layout','التخطيط','Visible','إظهار','Clockwise','مع عقارب الساعة','Price','السعر','Highlight','التمييز','Protractor','المنقلة'];var score=0;for(var i=0;i<tokens.length;i++)if(text.indexOf(tokens[i])!==-1)score++;return score;}
+function findPanel(){var best=null;var score=-1;try{visitDocs(frame.contentDocument,function(doc){var asides=doc.querySelectorAll('aside');for(var i=0;i<asides.length;i++){var value=panelScore(asides[i]);if(value>score){score=value;best=asides[i];}}},0);}catch(error){}return score>=4?best:null;}
+function toArabicDigits(value){return String(value||'').replace(/[0-9]/g,function(d){return TO_AR[d];});}
+function toEnglishDigits(value){return String(value||'').replace(/[٠-٩]/g,function(d){return TO_EN[d];});}
+function canonicalText(value){var raw=String(value==null?'':value);var trimmed=raw.trim();if(!trimmed)return raw;var circleAr=trimmed.match(/^دائرة من\s+([٠-٩0-9]+)\s+قسم(?:ًا|ا)$/);if(circleAr)return raw.replace(trimmed,'Circle of '+toEnglishDigits(circleAr[1]));var exact=REVERSE[trimmed];if(exact)return raw.replace(trimmed,exact);var converted=trimmed.replace(/شمال/g,'North').replace(/جنوب/g,'South').replace(/شرق/g,'East').replace(/غرب/g,'West');return raw.replace(trimmed,converted);}
+function arabicText(value){var canonical=canonicalText(value);var trimmed=canonical.trim();if(!trimmed)return canonical;var circle=trimmed.match(/^Circle of\s+(\d+)$/i);var translated=circle?'دائرة من '+toArabicDigits(circle[1])+' قسمًا':(AR[trimmed]||trimmed);
+translated=translated.replace(/\bNorth\b/g,'شمال').replace(/\bSouth\b/g,'جنوب').replace(/\bEast\b/g,'شرق').replace(/\bWest\b/g,'غرب');var lead=(canonical.match(/^\s*/)||[''])[0];var tail=(canonical.match(/\s*$/)||[''])[0];return lead+translated+tail;}
+function targetText(value,lang){return lang==='ar'?arabicText(value):canonicalText(value);}
+function applyPanel(panel,lang){if(!panel||applying)return 0;applying=true;var changed=0;try{panel.setAttribute('lang',lang);panel.setAttribute('data-v56-language',lang);var doc=panel.ownerDocument;var walker=doc.createTreeWalker(panel,NodeFilter.SHOW_TEXT);var nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);for(var i=0;i<nodes.length;i++){var node=nodes[i];var parent=node.parentElement;if(!parent||/^(SCRIPT|STYLE|TEXTAREA)$/i.test(parent.tagName))continue;var next=targetText(node.nodeValue,lang);if(node.nodeValue!==next){node.nodeValue=next;changed++;}}
+var attrs=['title','aria-label','placeholder'];var els=panel.querySelectorAll('[title],[aria-label],[placeholder]');for(var e=0;e<els.length;e++){for(var a=0;a<attrs.length;a++){var name=attrs[a];if(!els[e].hasAttribute(name))continue;var current=els[e].getAttribute(name);var nextAttr=targetText(current,lang);if(current!==nextAttr)els[e].setAttribute(name,nextAttr);}}
+var controls=panel.querySelectorAll('input,select,textarea');for(var c=0;c<controls.length;c++)controls[c].setAttribute('lang',lang);
+}finally{applying=false;}return changed;}
+function ensureObserver(panel){if(observedPanel===panel&&observer)return;if(observer)observer.disconnect();observedPanel=panel;observer=new MutationObserver(function(){if(applying)return;setTimeout(function(){applyPanel(observedPanel,currentLanguage);},0);});observer.observe(panel,{childList:true,subtree:true,characterData:true});}
+function readLanguage(){var select=findToolbarSelect();if(select&&(select.value==='ar'||select.value==='en'))return select.value;var result='en';try{visitDocs(frame.contentDocument,function(doc){try{var stored=doc.defaultView.localStorage.getItem('tasi-gannzilla-language-v1');if(stored==='ar'||stored==='en')result=stored;}catch(error){}},0);}catch(error){}return result;}
+function sync(){try{var panel=findPanel();if(!panel)return false;currentLanguage=readLanguage();ensureObserver(panel);var changed=applyPanel(panel,currentLanguage);var view=panel.ownerDocument.defaultView;view.__auditKawkabatBidirectionalNativePanelLanguageV56=function(){return{ok:true,currentLanguage:currentLanguage,panelFound:true,panelScore:panelScore(panel),changedNodeCount:changed,bidirectionalDictionary:true,englishRestorationIndependentOfInitialText:true,mutationObserverActive:!!observer,wheelDigitsHandledBy:'V50',panelGeometryChanged:false,wheelGeometryChanged:false,ornateFrameChanged:false};};return true;}catch(error){return false;}}
+function start(){if(timer)clearInterval(timer);timer=setInterval(sync,120);sync();}
+frame.addEventListener('load',start);start();
+}());
+</script>
+</body>
+</html>

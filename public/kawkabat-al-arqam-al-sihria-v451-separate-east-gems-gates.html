@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>كوكبة الأرقام السحرية V427 — الأساس الموحد مع البوابات والهندسة</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#f7f1e3}
+    #v411-frame{display:block;width:100%;height:100%;border:0}
+  </style>
+</head>
+<body>
+  <iframe id="v411-frame" title="كوكبة الأرقام السحرية"
+    src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-al-arqam-al-sihria-v450-separate-small-large-east-gems-core.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('v411-frame');
+    var STORAGE_KEY='tasi-v413-cell-color-stages';
+    var states=load(),boundLayer=null,bypassEvent=false,installCount=0;
+    function load(){try{var data=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');return data&&typeof data==='object'?data:{};}catch(error){return{};}}
+    function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(states));}catch(error){}}
+    function visit(doc,callback,depth){
+      if(!doc||depth>520)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function findWheel(){
+      var root=null;try{root=frame.contentDocument;}catch(error){}
+      if(!root)return null;
+      return visit(root,function(doc){
+        var wheel=doc.getElementById('wheel'),layer=doc.getElementById('v131CellColorLayer');
+        return wheel&&layer&&layer.querySelector('path[data-v131-cell-key]')?wheel:null;
+      },0);
+    }
+    function clearManualStyle(path){
+      path.style.removeProperty('fill');path.style.removeProperty('fill-opacity');
+      path.style.removeProperty('opacity');path.removeAttribute('data-v413-manual-color');
+    }
+    function paintManual(path,stage){
+      var color=stage===1?'#FFE45C':'#4B5050';
+      var opacity=stage===1?'0.88':'0.82';
+      path.style.setProperty('fill',color,'important');
+      path.style.setProperty('fill-opacity',opacity,'important');
+      path.style.setProperty('opacity','1','important');
+      path.setAttribute('data-v413-manual-color',stage===1?'yellow':'graphite');
+    }
+    function nativeEvent(path,type){
+      var view=path.ownerDocument.defaultView;
+      bypassEvent=true;
+      try{path.dispatchEvent(new view.MouseEvent(type,{bubbles:true,cancelable:true,button:type==='contextmenu'?2:0}));}
+      finally{bypassEvent=false;}
+    }
+    function restore(path,stage){
+      if(stage===1||stage===2){paintManual(path,stage);return;}
+      clearManualStyle(path);
+      if(stage===3){nativeEvent(path,'click');return;}
+      if(stage===4){nativeEvent(path,'click');nativeEvent(path,'click');}
+    }
+    function attach(path){
+      if(path.dataset.v413OriginalBinding==='true')return;
+      path.dataset.v413OriginalBinding='true';
+      var key=path.getAttribute('data-v131-cell-key');if(!key)return;
+      path.addEventListener('click',function(event){
+        if(bypassEvent)return;
+        event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+        var current=Number(states[key])||0;
+        var next=(current+1)%5;
+        if(current===3||current===4)nativeEvent(path,'contextmenu');
+        if(next===0){delete states[key];clearManualStyle(path);}
+        else if(next===1||next===2){states[key]=next;paintManual(path,next);}
+        else{
+          states[key]=next;clearManualStyle(path);
+          nativeEvent(path,'click');
+          if(next===4)nativeEvent(path,'click');
+        }
+        save();
+      },true);
+      path.addEventListener('contextmenu',function(event){
+        if(bypassEvent)return;
+        event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+        delete states[key];clearManualStyle(path);nativeEvent(path,'contextmenu');save();
+      },true);
+      restore(path,Number(states[key])||0);
+    }
+    function install(){
+      var wheel=findWheel();if(!wheel)return false;
+      var layer=wheel.querySelector('#v131CellColorLayer');if(!layer)return false;
+      if(layer!==boundLayer){
+        boundLayer=layer;installCount+=1;
+        var paths=layer.querySelectorAll('path[data-v131-cell-key]');
+        for(var i=0;i<paths.length;i++)attach(paths[i]);
+      }
+      wheel.ownerDocument.documentElement.dataset.v413ColorOrder='yellow-graphite-green-with-gates-and-geometry-red-with-gates-and-geometry-clear';
+      wheel.ownerDocument.documentElement.dataset.v413OriginalGateGeometryBinding='preserved';
+      wheel.ownerDocument.documentElement.dataset.v413SavedCellCount=String(Object.keys(states).length);
+      return true;
+    }
+    frame.addEventListener('load',install);
+    var attempts=0;(function boot(){attempts+=1;if(!install()&&attempts<7200)setTimeout(boot,100);}());
+    setInterval(function(){try{install();}catch(error){}},180);
+    window.__auditV413=function(){return{ready:install(),colorOrder:['yellow','graphite','green','red','clear'],
+      greenOriginalGatesAndGeometry:true,redOriginalGatesAndGeometry:true,originalLayerPreserved:true,
+      savedCellCount:Object.keys(states).length,installCount:installCount,wheelValueEngine:'V426-single-source-core',fibonacciFixedPositions:true};};
+  }());
+  </script>
+</body>
+</html>

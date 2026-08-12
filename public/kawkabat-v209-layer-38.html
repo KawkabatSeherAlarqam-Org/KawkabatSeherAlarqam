@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — Zodiac Champagne Cells V13</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-39.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+
+    var appFrame=document.getElementById('appFrame');
+    var NS='http://www.w3.org/2000/svg';
+    var observer=null;
+    var observedWheel=null;
+    var timer=null;
+    var poll=null;
+
+    function locateWheelDocument(doc,depth){
+      if(!doc||depth>8)return null;
+      if(doc.getElementById('wheel'))return doc;
+      var frames=doc.querySelectorAll('iframe');
+      for(var index=0;index<frames.length;index+=1){
+        try{
+          var found=locateWheelDocument(frames[index].contentDocument,depth+1);
+          if(found)return found;
+        }catch(error){}
+      }
+      return null;
+    }
+
+    function ensureGradient(wheelDoc){
+      var svg=wheelDoc.getElementById('wheel');
+      var defs=svg&&svg.querySelector('defs');
+      if(!defs)return null;
+      var gradient=wheelDoc.getElementById('zodiacChampagneRadialV13');
+      if(!gradient){
+        gradient=wheelDoc.createElementNS(NS,'radialGradient');
+        gradient.setAttribute('id','zodiacChampagneRadialV13');
+        gradient.setAttribute('gradientUnits','userSpaceOnUse');
+        gradient.setAttribute('cx','2200');
+        gradient.setAttribute('cy','1800');
+        gradient.setAttribute('r','1610');
+        [
+          ['0%','#F7F1E3'],
+          ['93.17%','#C8AA90'],
+          ['95.10%','#E0CEC0'],
+          ['96.58%','#F1E5DB'],
+          ['98.05%','#E0CEC0'],
+          ['100%','#C8AA90']
+        ].forEach(function(item){
+          var stop=wheelDoc.createElementNS(NS,'stop');
+          stop.setAttribute('offset',item[0]);
+          stop.setAttribute('stop-color',item[1]);
+          gradient.appendChild(stop);
+        });
+        defs.appendChild(gradient);
+      }
+      return gradient;
+    }
+
+    function ensureZodiacBackground(wheelDoc){
+      var wheel=wheelDoc.getElementById('wheel');
+      if(!wheel)return null;
+      var background=wheelDoc.getElementById('thirteenthWheelBackground');
+      if(!background){
+        background=wheelDoc.getElementById('zodiacChampagneBackgroundV13');
+      }
+      if(!background){
+        background=wheelDoc.createElementNS(NS,'circle');
+        background.setAttribute('id','zodiacChampagneBackgroundV13');
+        background.setAttribute('cx','2200');
+        background.setAttribute('cy','1800');
+        background.setAttribute('r','1555');
+        var firstPaintLayer=wheelDoc.getElementById('specialFills')||wheel.firstChild;
+        wheel.insertBefore(background,firstPaintLayer);
+      }
+      background.setAttribute('fill','none');
+      background.setAttribute('stroke','url(#zodiacChampagneRadialV13)');
+      background.setAttribute('stroke-width','110');
+      background.setAttribute('pointer-events','none');
+      background.setAttribute('data-zodiac-champagne-v13','true');
+      background.style.opacity='1';
+      background.style.display='';
+      return background;
+    }
+
+    function applyZodiacChampagne(){
+      try{
+        var wheelDoc=locateWheelDocument(appFrame.contentDocument,0);
+        if(!wheelDoc)return false;
+        var wheel=wheelDoc.getElementById('wheel');
+        var labels=wheelDoc.getElementById('allBalancedDaysZodiac');
+        if(!wheel||!labels)return false;
+        if(!ensureGradient(wheelDoc))return false;
+        var background=ensureZodiacBackground(wheelDoc);
+        if(!background)return false;
+
+        wheelDoc.documentElement.dataset.zodiacCellPalette='champagne-beige-rose-bronze';
+        wheelDoc.documentElement.dataset.zodiacCellBaseHex='#DAC4B2';
+        wheelDoc.documentElement.dataset.zodiacCellsRecolored='true';
+
+        if(observedWheel!==wheel){
+          if(observer)observer.disconnect();
+          observer=new MutationObserver(scheduleApply);
+          observer.observe(wheel,{childList:true,subtree:true});
+          observedWheel=wheel;
+        }
+
+        if(wheelDoc.defaultView){
+          wheelDoc.defaultView.__auditKawkabatZodiacChampagneV13=function(){
+            return{
+              ok:background.getAttribute('stroke')==='url(#zodiacChampagneRadialV13)',
+              changedArea:'zodiac-cell-background-only',
+              palette:'champagne-beige-rose-bronze',
+              baseHex:'#DAC4B2',
+              gradientStops:['#C8AA90','#E0CEC0','#F1E5DB','#E0CEC0','#C8AA90'],
+              zodiacLabelCount:labels.children.length,
+              numbersChanged:false,
+              valuesChanged:false,
+              geometryChanged:false,
+              cardinalBandsChanged:false,
+              framesChanged:false,
+              textChanged:false
+            };
+          };
+        }
+        return true;
+      }catch(error){
+        return false;
+      }
+    }
+
+    function scheduleApply(){
+      if(timer)clearTimeout(timer);
+      timer=setTimeout(function(){timer=null;applyZodiacChampagne();},40);
+    }
+
+    function startPolling(){
+      if(poll)clearInterval(poll);
+      var attempts=0;
+      poll=setInterval(function(){
+        attempts+=1;
+        if(applyZodiacChampagne()||attempts>=400){
+          clearInterval(poll);
+          poll=null;
+        }
+      },100);
+    }
+
+    appFrame.addEventListener('load',startPolling);
+    startPolling();
+  }());
+  </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — Center Anchor V11</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation — Center Anchor" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-al-arqam-al-sihria-v209-canonical-3600-center-10-rings-base.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('appFrame');
+    function markClean(){
+      try{
+        var doc=frame.contentDocument;
+        if(doc&&doc.documentElement){
+          doc.documentElement.dataset.v180CompatibilityLayer='transparent-no-value-writer';
+        }
+      }catch(error){}
+    }
+    frame.addEventListener('load',markClean);
+    markClean();
+  }());
+  </script>
+</body>
+</html>

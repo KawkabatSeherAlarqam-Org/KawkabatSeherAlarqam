@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Ornamental Black Band V33</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-24.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var poll=null;
+var NS='http://www.w3.org/2000/svg';
+var BAND_WIDTH_ADD=30;
+var BAND_RADIUS_ADD=BAND_WIDTH_ADD/2;
+var OUTER_FRAME_SHIFT=30;
+var MOTIF_COUNT=64;
+
+function locateWheelDocument(doc,depth){
+  if(!doc||depth>50)return null;
+  if(doc.getElementById('wheel'))return doc;
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){
+    try{var found=locateWheelDocument(frames[i].contentDocument,depth+1);if(found)return found;}catch(error){}
+  }
+  return null;
+}
+
+function make(type,attrs){
+  var node=document.createElementNS(NS,type);
+  Object.keys(attrs||{}).forEach(function(key){node.setAttribute(key,attrs[key]);});
+  return node;
+}
+
+function polar(cx,cy,r,degree){
+  var angle=(degree-90)*Math.PI/180;
+  return{x:cx+Math.cos(angle)*r,y:cy+Math.sin(angle)*r};
+}
+
+function originalNumber(node,attr,key,fallback){
+  var data='data-v33-original-'+key;
+  var stored=node.getAttribute(data);
+  if(stored==null){
+    stored=node.getAttribute(attr);
+    if(stored==null||stored==='')stored=String(fallback);
+    node.setAttribute(data,stored);
+  }
+  var value=Number.parseFloat(stored);
+  return Number.isFinite(value)?value:fallback;
+}
+
+function addDefs(svg){
+  var old=svg.querySelector('#v33OrnamentDefs');
+  if(old)old.remove();
+  var defs=make('defs',{id:'v33OrnamentDefs'});
+  var gradient=make('linearGradient',{id:'v33GoldGradient',x1:'0%',y1:'0%',x2:'100%',y2:'100%'});
+  [['0%','#6A390B'],['18%','#C77A1C'],['42%','#FFE4A0'],['58%','#E7B84E'],['78%','#9C5712'],['100%','#F4D37B']].forEach(function(stop){gradient.appendChild(make('stop',{offset:stop[0],'stop-color':stop[1]}));});
+  defs.appendChild(gradient);
+  var filter=make('filter',{id:'v33GoldShadow',x:'-40%',y:'-40%',width:'180%',height:'180%'});
+  filter.appendChild(make('feDropShadow',{dx:'0',dy:'1.4',stdDeviation:'1.2','flood-color':'#2D1604','flood-opacity':'.9'}));
+  defs.appendChild(filter);
+  svg.insertBefore(defs,svg.firstChild);
+  return defs;
+}
+
+function buildMotif(size){
+  var motif=make('g',{id:'v33GoldMotif'});
+  var gold='url(#v33GoldGradient)';
+  var dark='#4E2907';
+  var sw=Math.max(2.2,size*.085);
+  motif.appendChild(make('path',{
+    d:'M '+(-2.35*size)+' 0 C '+(-1.85*size)+' '+(-.72*size)+', '+(-1.15*size)+' '+(-.72*size)+', '+(-.55*size)+' 0 C '+(-.35*size)+' '+(.30*size)+', '+(-.12*size)+' '+(.28*size)+', 0 0 C '+(.12*size)+' '+(.28*size)+', '+(.35*size)+' '+(.30*size)+', '+(.55*size)+' 0 C '+(1.15*size)+' '+(-.72*size)+', '+(1.85*size)+' '+(-.72*size)+', '+(2.35*size)+' 0',
+    fill:'none',stroke:gold,'stroke-width':sw,'stroke-linecap':'round','stroke-linejoin':'round',filter:'url(#v33GoldShadow)'
+  }));
+  motif.appendChild(make('path',{
+    d:'M 0 '+(.84*size)+' C '+(-.18*size)+' '+(.44*size)+', '+(-.36*size)+' '+(.10*size)+', '+(-.44*size)+' '+(-.22*size)+' C '+(-.54*size)+' '+(-.58*size)+', '+(-.26*size)+' '+(-.96*size)+', 0 '+(-1.25*size)+' C '+(.26*size)+' '+(-.96*size)+', '+(.54*size)+' '+(-.58*size)+', '+(.44*size)+' '+(-.22*size)+' C '+(.36*size)+' '+(.10*size)+', '+(.18*size)+' '+(.44*size)+', 0 '+(.84*size)+' Z',
+    fill:gold,stroke:dark,'stroke-width':Math.max(1.4,size*.045),filter:'url(#v33GoldShadow)'
+  }));
+  motif.appendChild(make('path',{
+    d:'M '+(-.08*size)+' '+(.12*size)+' C '+(-.72*size)+' '+(.02*size)+', '+(-.84*size)+' '+(-.54*size)+', '+(-.52*size)+' '+(-.86*size)+' C '+(-.24*size)+' '+(-.48*size)+', '+(-.08*size)+' '+(-.16*size)+', 0 '+(.18*size)+' C '+(.08*size)+' '+(-.16*size)+', '+(.24*size)+' '+(-.48*size)+', '+(.52*size)+' '+(-.86*size)+' C '+(.84*size)+' '+(-.54*size)+', '+(.72*size)+' '+(.02*size)+', '+(.08*size)+' '+(.12*size),
+    fill:gold,stroke:dark,'stroke-width':Math.max(1.2,size*.04),filter:'url(#v33GoldShadow)'
+  }));
+  motif.appendChild(make('circle',{cx:'0',cy:'0',r:(.13*size),fill:'#FFE5A1',stroke:dark,'stroke-width':Math.max(1,size*.035)}));
+  return motif;
+}
+
+function apply(){
+  try{
+    var doc=locateWheelDocument(frame.contentDocument,0);
+    if(!doc)return false;
+    var svg=doc.getElementById('wheel');
+    var outerFrame=doc.getElementById('outerBlackFrame');
+    var ornaments=doc.getElementById('cardinalOrnaments');
+    if(!svg||!outerFrame)return false;
+    var blackBand=outerFrame.querySelector('.outer-black-band');
+    if(!blackBand)return false;
+
+    var view=doc.defaultView;
+    var originalR=originalNumber(blackBand,'r','black-band-r',1752);
+    var originalW=originalNumber(blackBand,'stroke-width','black-band-w',Number.parseFloat(view.getComputedStyle(blackBand).strokeWidth)||64);
+    blackBand.setAttribute('r',String(originalR+BAND_RADIUS_ADD));
+    blackBand.style.setProperty('stroke-width',(originalW+BAND_WIDTH_ADD)+'px','important');
+    blackBand.style.setProperty('vector-effect','non-scaling-stroke','important');
+
+    outerFrame.querySelectorAll('circle').forEach(function(circle){
+      if(circle===blackBand)return;
+      var r=originalNumber(circle,'r','outer-'+(circle.getAttribute('class')||'circle').replace(/\s+/g,'-'),Number(circle.getAttribute('r'))||0);
+      if(r>originalR)circle.setAttribute('r',String(r+OUTER_FRAME_SHIFT));
+    });
+
+    if(ornaments){
+      ornaments.querySelectorAll('.cardinal-ornament').forEach(function(group){
+        var angle=Number(group.getAttribute('data-angle'));
+        var original=group.getAttribute('data-v33-original-transform');
+        if(original==null){original=group.getAttribute('transform')||'';group.setAttribute('data-v33-original-transform',original);}
+        var shift=angle===360?'translate(0 -'+OUTER_FRAME_SHIFT+')':angle===90?'translate('+OUTER_FRAME_SHIFT+' 0)':angle===180?'translate(0 '+OUTER_FRAME_SHIFT+')':angle===270?'translate(-'+OUTER_FRAME_SHIFT+' 0)':'';
+        group.setAttribute('transform',(original+' '+shift).trim());
+      });
+    }
+
+    addDefs(svg);
+    var old=doc.getElementById('v33OrnamentalBand');
+    if(old)old.remove();
+    var viewBox=(svg.getAttribute('viewBox')||'0 0 4400 3600').split(/\s+/).map(Number);
+    var cx=(viewBox[0]||0)+(viewBox[2]||4400)/2;
+    var cy=(viewBox[1]||0)+(viewBox[3]||3600)/2;
+    var finalR=originalR+BAND_RADIUS_ADD;
+    var finalW=originalW+BAND_WIDTH_ADD;
+    var ornamentRadius=finalR;
+    var motifSize=Math.max(26,Math.min(40,finalW*.42));
+
+    var group=make('g',{id:'v33OrnamentalBand','pointer-events':'none'});
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:finalR-finalW/2+5,fill:'none',stroke:'#D4A246','stroke-width':'3.4',opacity:'.98'}));
+    group.appendChild(make('circle',{cx:cx,cy:cy,r:finalR+finalW/2-5,fill:'none',stroke:'#D4A246','stroke-width':'3.4',opacity:'.98'}));
+    var motif=buildMotif(motifSize);
+    group.appendChild(motif);
+    for(var i=0;i<MOTIF_COUNT;i+=1){
+      var degree=i*(360/MOTIF_COUNT);
+      var point=polar(cx,cy,ornamentRadius,degree);
+      group.appendChild(make('use',{href:'#v33GoldMotif',transform:'translate('+point.x.toFixed(3)+' '+point.y.toFixed(3)+') rotate('+degree.toFixed(3)+')'}));
+    }
+    outerFrame.appendChild(group);
+
+    doc.documentElement.dataset.ornamentalBlackBandV33='true';
+    doc.documentElement.dataset.ornamentalMotifCount=String(MOTIF_COUNT);
+    doc.documentElement.dataset.blackBandWidthAdded=String(BAND_WIDTH_ADD);
+    doc.documentElement.dataset.blackBandExpandedOutwardOnly='true';
+
+    view.__auditKawkabatOrnamentalBlackBandV33=function(){
+      return{
+        ok:group.querySelectorAll('use').length===MOTIF_COUNT,
+        changedArea:'ornamental-black-band-and-outward-room-only',
+        motifCount:MOTIF_COUNT,
+        bandWidthBefore:originalW,
+        bandWidthAfter:finalW,
+        bandRadiusBefore:originalR,
+        bandRadiusAfter:finalR,
+        innerBoundaryChanged:false,
+        angleNumbersChanged:false,
+        angleTicksChanged:false,
+        zodiacChanged:false,
+        wheelNumbersChanged:false,
+        innerWheelGeometryChanged:false
+      };
+    };
+    return true;
+  }catch(error){return false;}
+}
+
+function start(){
+  if(poll)clearInterval(poll);
+  var attempts=0;
+  poll=setInterval(function(){attempts+=1;if(apply()||attempts>=1600){clearInterval(poll);poll=null;}},100);
+}
+frame.addEventListener('load',start);
+start();
+}());
+</script>
+</body>
+</html>

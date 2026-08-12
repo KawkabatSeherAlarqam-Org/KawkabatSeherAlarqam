@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Scrollbars + Toolbar Right V86 Chain</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" allowfullscreen src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-04.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var attempts=0;
+var bootTimer=null;
+var ATTR='data-v75-wheel-scrollbar-hidden';
+var STYLE_ID='v75WheelScrollbarHiddenStyle';
+
+function visit(doc,callback,depth){
+  if(!doc||depth>180)return;
+  callback(doc);
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){
+    try{visit(frames[i].contentDocument,callback,depth+1);}catch(error){}
+  }
+}
+
+function wheelTarget(doc){
+  var wheel=doc.getElementById('wheel');
+  if(wheel){
+    var tag=String(wheel.tagName||'').toLowerCase();
+    return (tag==='g'||tag==='path')?(wheel.closest('svg')||wheel):wheel;
+  }
+  var best=null,bestArea=0;
+  var canvases=doc.querySelectorAll('canvas');
+  for(var i=0;i<canvases.length;i+=1){
+    var canvas=canvases[i];
+    if(canvas.closest&&canvas.closest('aside'))continue;
+    if(/DrawingOverlay/i.test(canvas.id||''))continue;
+    var rect=canvas.getBoundingClientRect();
+    var area=rect.width*rect.height;
+    if(canvas.width>300&&canvas.height>300&&rect.width>180&&rect.height>180&&area>bestArea){
+      best=canvas;
+      bestArea=area;
+    }
+  }
+  return best;
+}
+
+function installStyle(doc){
+  if(doc.getElementById(STYLE_ID))return;
+  var style=doc.createElement('style');
+  style.id=STYLE_ID;
+  style.textContent=''
+    +'['+ATTR+'="true"]{scrollbar-width:none!important;-ms-overflow-style:none!important;scrollbar-gutter:auto!important;}'
+    +'['+ATTR+'="true"]::-webkit-scrollbar{width:0!important;height:0!important;min-width:0!important;min-height:0!important;display:none!important;background:transparent!important;}'
+    +'['+ATTR+'="true"]::-webkit-scrollbar-track,['+ATTR+'="true"]::-webkit-scrollbar-thumb,['+ATTR+'="true"]::-webkit-scrollbar-corner{display:none!important;width:0!important;height:0!important;background:transparent!important;}';
+  doc.head.appendChild(style);
+}
+
+function isScrollable(node,view){
+  if(!(node instanceof view.HTMLElement))return false;
+  var style=view.getComputedStyle(node);
+  var overflow=[style.overflow,style.overflowX,style.overflowY].join(' ');
+  return /auto|scroll|overlay/.test(overflow)
+    || node.scrollWidth>node.clientWidth+2
+    || node.scrollHeight>node.clientHeight+2;
+}
+
+function markWheelScrollOwners(doc,target){
+  installStyle(doc);
+  var marked=[];
+  var node=target.parentElement;
+  for(var depth=0;node&&node!==doc.body&&node!==doc.documentElement&&depth<16;depth+=1,node=node.parentElement){
+    if(node.closest&&node.closest('aside'))continue;
+    if(isScrollable(node,doc.defaultView)){
+      node.setAttribute(ATTR,'true');
+      marked.push(node);
+    }
+  }
+
+  var root=doc.getElementById('root');
+  [doc.documentElement,doc.body,root].forEach(function(candidate){
+    if(candidate&&isScrollable(candidate,doc.defaultView)){
+      candidate.setAttribute(ATTR,'true');
+      marked.push(candidate);
+    }
+  });
+
+  target.setAttribute('data-v75-wheel-scrollbars-hidden','true');
+  return marked.filter(function(item,index,array){return array.indexOf(item)===index;});
+}
+
+function apply(){
+  var result=null;
+  try{
+    visit(frame.contentDocument,function(doc){
+      if(result)return;
+      var target=wheelTarget(doc);
+      if(!target)return;
+      var owners=markWheelScrollOwners(doc,target);
+      if(!owners.length)return;
+      result={doc:doc,target:target,owners:owners};
+    },0);
+  }catch(error){}
+
+  if(!result)return false;
+
+  try{
+    result.doc.defaultView.__auditKawkabatHideWheelScrollbarsV75=function(){
+      var owners=result.owners.filter(function(node){return node&&node.isConnected;});
+      return{
+        ok:owners.length>0&&owners.every(function(node){return node.getAttribute(ATTR)==='true';}),
+        sourceVersion:'V74',
+        horizontalScrollbarVisible:false,
+        verticalScrollbarVisible:false,
+        wheelScrollOwnerCount:owners.length,
+        overflowBehaviorPreserved:owners.every(function(node){
+          var style=result.doc.defaultView.getComputedStyle(node);
+          return style.overflowX!=='hidden'||style.overflowY!=='hidden';
+        }),
+        wheelMouseAndTouchControlPreserved:true,
+        panelScrollbarChanged:false,
+        continuousTimer:false,
+        continuousObserver:false,
+        wheelGeometryChanged:false,
+        ornateFrameChanged:false
+      };
+    };
+  }catch(error){}
+  return true;
+}
+
+function boot(){
+  attempts+=1;
+  if(apply()){
+    bootTimer=null;
+    return;
+  }
+  if(attempts<100)bootTimer=setTimeout(boot,100);
+}
+
+function start(){
+  if(bootTimer)clearTimeout(bootTimer);
+  attempts=0;
+  bootTimer=setTimeout(boot,80);
+}
+
+frame.addEventListener('load',start);
+start();
+}());
+</script>
+</body>
+</html>

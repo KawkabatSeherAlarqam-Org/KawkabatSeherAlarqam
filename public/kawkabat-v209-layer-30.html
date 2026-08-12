@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — V24 + Clear Outward Angle Ticks V25</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-31.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+
+    var appFrame=document.getElementById('appFrame');
+    var poll=null;
+
+    function locateWheelDocument(doc,depth){
+      if(!doc||depth>28)return null;
+      if(doc.getElementById('wheel'))return doc;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i+=1){
+        try{
+          var found=locateWheelDocument(frames[i].contentDocument,depth+1);
+          if(found)return found;
+        }catch(error){}
+      }
+      return null;
+    }
+
+    function applyClearOutwardTicks(){
+      try{
+        var wheelDoc=locateWheelDocument(appFrame.contentDocument,0);
+        if(!wheelDoc)return false;
+
+        var angleTicks=wheelDoc.getElementById('angleTicks');
+        if(!angleTicks)return false;
+
+        var ticks=angleTicks.querySelectorAll('line.angle-tick');
+        if(ticks.length!==360)return false;
+
+        var majorCount=0;
+        var fiveCount=0;
+        var minorCount=0;
+
+        ticks.forEach(function(tick,index){
+          var originalX1=tick.getAttribute('data-v25-original-x1');
+          var originalY1=tick.getAttribute('data-v25-original-y1');
+          var originalX2=tick.getAttribute('data-v25-original-x2');
+          var originalY2=tick.getAttribute('data-v25-original-y2');
+
+          if(originalX1==null||originalY1==null||originalX2==null||originalY2==null){
+            originalX1=tick.getAttribute('x1');
+            originalY1=tick.getAttribute('y1');
+            originalX2=tick.getAttribute('x2');
+            originalY2=tick.getAttribute('y2');
+            tick.setAttribute('data-v25-original-x1',originalX1);
+            tick.setAttribute('data-v25-original-y1',originalY1);
+            tick.setAttribute('data-v25-original-x2',originalX2);
+            tick.setAttribute('data-v25-original-y2',originalY2);
+          }
+
+          var x1=Number(originalX1);
+          var y1=Number(originalY1);
+          var x2=Number(originalX2);
+          var y2=Number(originalY2);
+          if(!Number.isFinite(x1)||!Number.isFinite(y1)||!Number.isFinite(x2)||!Number.isFinite(y2))return;
+
+          var dx=x1-x2;
+          var dy=y1-y2;
+          var len=Math.sqrt(dx*dx+dy*dy);
+          if(!len)return;
+
+          var ux=dx/len;
+          var uy=dy/len;
+          var extend=4;
+          var width='2.2';
+
+          if(index%10===0){
+            extend=8;
+            width='4.2';
+            majorCount+=1;
+          }else if(index%5===0){
+            extend=6;
+            width='3.2';
+            fiveCount+=1;
+          }else{
+            minorCount+=1;
+          }
+
+          tick.setAttribute('x1',(x1+(ux*extend)).toFixed(3));
+          tick.setAttribute('y1',(y1+(uy*extend)).toFixed(3));
+          tick.setAttribute('x2',String(x2));
+          tick.setAttribute('y2',String(y2));
+          tick.setAttribute('stroke-width',width);
+          tick.style.setProperty('stroke','#17110D','important');
+          tick.style.setProperty('opacity','1','important');
+          tick.style.setProperty('stroke-linecap','round','important');
+          tick.style.setProperty('vector-effect','non-scaling-stroke','important');
+        });
+
+        wheelDoc.documentElement.dataset.clearOutwardAngleTicksV25='true';
+        wheelDoc.documentElement.dataset.tickDirection='outward-only';
+        wheelDoc.documentElement.dataset.angleLabelsChanged='false';
+        wheelDoc.documentElement.dataset.innerGeometryChanged='false';
+
+        if(wheelDoc.defaultView){
+          wheelDoc.defaultView.__auditKawkabatClearOutwardAngleTicksV25=function(){
+            return{
+              ok:majorCount===36&&fiveCount===36&&minorCount===288,
+              changedArea:'angle-ticks-only-clearer-thicker-outward-only',
+              majorTenCount:majorCount,
+              majorFiveCount:fiveCount,
+              minorTickCount:minorCount,
+              tenStrokeWidth:'4.2',
+              fiveStrokeWidth:'3.2',
+              minorStrokeWidth:'2.2',
+              tenOutwardExtend:'8px',
+              fiveOutwardExtend:'6px',
+              minorOutwardExtend:'4px',
+              tickColor:'#17110D',
+              positionShiftDirection:'outward-only',
+              angleLabelsChanged:false,
+              zodiacChanged:false,
+              wheelNumbersChanged:false,
+              valuesChanged:false,
+              innerGeometryChanged:false
+            };
+          };
+        }
+
+        return true;
+      }catch(error){
+        return false;
+      }
+    }
+
+    function startPolling(){
+      if(poll)clearInterval(poll);
+      var attempts=0;
+      poll=setInterval(function(){
+        attempts+=1;
+        if(applyClearOutwardTicks()||attempts>=900){
+          clearInterval(poll);
+          poll=null;
+        }
+      },100);
+    }
+
+    appFrame.addEventListener('load',startPolling);
+    startPolling();
+  }());
+  </script>
+</body>
+</html>

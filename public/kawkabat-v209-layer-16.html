@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Live Language V50</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-17.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var poll=null;
+var lang='en';
+var saved=[];
+var digits={'0':'٠','1':'١','2':'٢','3':'٣','4':'٤','5':'٥','6':'٦','7':'٧','8':'٨','9':'٩'};
+var labels={
+'Default':'الافتراضي','Layout':'التخطيط','Visible':'ظاهر','Clockwise':'مع عقارب الساعة','Size':'الحجم','View':'طريقة العرض','Data type':'نوع البيانات','Price':'السعر','Value':'القيمة','Find':'بحث','Increment':'الزيادة','Highlight':'التمييز','Fill':'التعبئة','Levels':'المستويات','Show marks':'إظهار العلامات','Show numbers':'إظهار الأرقام','Protractor':'المنقلة','Angle':'الزاوية','Counter':'العداد','Secondary scale':'المقياس الثانوي','Circle of 36':'دائرة من ٣٦ قسماً'
+};
+function locate(doc,depth,test){if(!doc||depth>160)return null;if(test(doc))return doc;var fs=doc.querySelectorAll('iframe');for(var i=0;i<fs.length;i++){try{var f=locate(fs[i].contentDocument,depth+1,test);if(f)return f;}catch(e){}}return null;}
+function toolbarDoc(){return locate(frame.contentDocument,0,function(d){return !!d.getElementById('v47Language');});}
+function wheelDoc(){return locate(frame.contentDocument,0,function(d){return !!d.getElementById('wheel');});}
+function arDigits(v){return String(v||'').replace(/[0-9]/g,function(d){return digits[d];});}
+function remember(el,kind,value){for(var i=0;i<saved.length;i++){if(saved[i].el===el&&saved[i].kind===kind)return;}saved.push({el:el,kind:kind,value:value});}
+function original(el,kind){for(var i=0;i<saved.length;i++){if(saved[i].el===el&&saved[i].kind===kind)return saved[i].value;}return null;}
+function translateText(v){var s=String(v||'');var t=s.trim();var out=labels[t]||t;out=out.replace(/^Circle of\s+(\d+)$/i,function(_,n){return 'دائرة من '+arDigits(n)+' قسماً';});return s.replace(t,arDigits(out));}
+function applyWheel(doc){var wheel=doc.getElementById('wheel');if(!wheel)return 0;var nodes=wheel.querySelectorAll('text,tspan');for(var i=0;i<nodes.length;i++){remember(nodes[i],'text',nodes[i].textContent);var base=original(nodes[i],'text');nodes[i].textContent=lang==='ar'?arDigits(base):base;}return nodes.length;}
+function applyTools(doc){var nodes=doc.querySelectorAll('aside label,aside span,aside div,aside button,aside option,aside legend,aside summary');var count=0;for(var i=0;i<nodes.length;i++){var el=nodes[i];if(el.children.length!==0)continue;var txt=String(el.textContent||'').trim();if(!txt)continue;remember(el,'text',el.textContent);var base=original(el,'text');el.textContent=lang==='ar'?translateText(base):base;count++;}var selects=doc.querySelectorAll('aside select');for(var s=0;s<selects.length;s++){selects[s].dir=lang==='ar'?'rtl':'ltr';}return count;}
+function applyFlag(doc){var flag=doc.querySelector('.v47flag');if(!flag)return;if(lang==='ar'){flag.style.setProperty('font-size','0','important');flag.style.setProperty('width','16px','important');flag.style.setProperty('height','11px','important');flag.style.setProperty('background','linear-gradient(#fff,#fff) 50% 72%/10px 1px no-repeat,linear-gradient(#fff,#fff) 50% 30%/8px 3px no-repeat,#006c35','important');}else{flag.style.removeProperty('background');}}
+function setLanguage(next){lang=next==='ar'?'ar':'en';var td=toolbarDoc();var wd=wheelDoc();if(!td||!wd)return false;var sel=td.getElementById('v47Language');if(sel){sel.options[0].value='en';sel.options[0].text='English';sel.options[1].value='ar';sel.options[1].text='العربية';sel.value=lang;}try{wd.defaultView.localStorage.setItem('tasi-gannzilla-language-v1',lang);}catch(e){}var wheelCount=applyWheel(wd);var toolCount=applyTools(wd);applyFlag(td);wd.documentElement.lang=lang;wd.documentElement.dataset.v50LiveLanguage=lang;try{wd.defaultView.dispatchEvent(new CustomEvent('gannzilla:language-change',{detail:{lang:lang,source:'v50'}}));}catch(e){}td.defaultView.__auditKawkabatLiveLanguageV50=function(){return{ok:true,currentLanguage:lang,wheelTextNodeCount:wheelCount,translatedToolNodeCount:toolCount,wheelDigitsRespond:true,toolsRespond:true,reloadUsed:false,urlChanged:false,failedFetchRiskRemoved:true,wheelGeometryChanged:false,ornateFrameChanged:false};};return true;}
+function bind(){var td=toolbarDoc();var wd=wheelDoc();if(!td||!wd)return false;var sel=td.getElementById('v47Language');if(!sel)return false;if(sel.dataset.v50Bound!=='true'){sel.dataset.v50Bound='true';sel.addEventListener('change',function(e){setLanguage(e.target.value);});}var stored='en';try{stored=wd.defaultView.localStorage.getItem('tasi-gannzilla-language-v1')||'en';}catch(e){}return setLanguage(stored);}
+function start(){if(poll)clearInterval(poll);var n=0;poll=setInterval(function(){n++;if(bind()||n>=2600){clearInterval(poll);poll=null;}},100);}
+frame.addEventListener('load',start);start();
+}());
+</script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — V85 Layout + Toolbar Right V86 Base</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+<script>
+try{localStorage.setItem('tasi-gannzilla-panel-visible-v66','true');}catch(error){}
+</script>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" allowfullscreen src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-07.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var timer=null;
+var panelVisible=true;
+var panel=null;
+var shellNodes=[];
+var originalStyles=new WeakMap();
+var STATE_KEY='tasi-gannzilla-panel-visible-v67';
+
+function visit(doc,callback,depth){
+  if(!doc||depth>180)return;
+  callback(doc);
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){
+    try{visit(frames[i].contentDocument,callback,depth+1);}catch(error){}
+  }
+}
+
+function readState(){
+  try{
+    var value=localStorage.getItem(STATE_KEY);
+    if(value==='false')return false;
+    if(value==='true')return true;
+  }catch(error){}
+  return true;
+}
+
+function writeState(){
+  try{localStorage.setItem(STATE_KEY,panelVisible?'true':'false');}catch(error){}
+}
+
+function hasPanelTerms(node){
+  var text=String(node&&node.textContent||'');
+  var english=/\bDefault\b/.test(text)&&/\bLayout\b/.test(text)&&/\bVisible\b/.test(text);
+  var arabic=/الافتراضي|التخطيط/.test(text)&&/إظهار|ظاهر/.test(text);
+  return english||arabic;
+}
+
+function findPanelAcrossDocuments(){
+  var best=null;
+  var bestScore=-1;
+  try{
+    visit(frame.contentDocument,function(doc){
+      var asides=doc.querySelectorAll('aside');
+      for(var i=0;i<asides.length;i+=1){
+        var aside=asides[i];
+        if(!aside.querySelector('input,select')||!hasPanelTerms(aside))continue;
+        var text=String(aside.textContent||'');
+        var terms=['Default','Layout','Visible','Clockwise','Price','Highlight','Protractor','Counter','الافتراضي','التخطيط','إظهار','السعر','التمييز','المنقلة','العداد'];
+        var score=0;
+        for(var t=0;t<terms.length;t+=1)if(text.indexOf(terms[t])!==-1)score+=1;
+        if(score>bestScore){bestScore=score;best=aside;}
+      }
+    },0);
+  }catch(error){}
+  return best;
+}
+
+function containsMainWheel(node){
+  if(!node||!node.querySelector)return false;
+  if(node.querySelector('#wheel'))return true;
+  var canvases=node.querySelectorAll('canvas');
+  for(var i=0;i<canvases.length;i+=1){
+    if(canvases[i].closest&&canvases[i].closest('aside'))continue;
+    if(canvases[i].width>300&&canvases[i].height>300)return true;
+  }
+  return false;
+}
+
+function remember(node){
+  if(!node||originalStyles.has(node))return;
+  var style=node.style;
+  var rect=node.getBoundingClientRect();
+  originalStyles.set(node,{
+    display:style.getPropertyValue('display'),
+    visibility:style.getPropertyValue('visibility'),
+    pointerEvents:style.getPropertyValue('pointer-events'),
+    width:style.getPropertyValue('width'),
+    minWidth:style.getPropertyValue('min-width'),
+    maxWidth:style.getPropertyValue('max-width'),
+    overflow:style.getPropertyValue('overflow'),
+    computedDisplay:getComputedStyle(node).display,
+    rectWidth:rect.width
+  });
+}
+
+function restoreProperty(node,name,value){
+  if(value)node.style.setProperty(name,value,'important');
+  else node.style.removeProperty(name);
+}
+
+function restoreNode(node){
+  var saved=originalStyles.get(node);
+  if(!saved)return;
+  restoreProperty(node,'display',saved.display||((saved.computedDisplay&&saved.computedDisplay!=='none')?saved.computedDisplay:''));
+  restoreProperty(node,'visibility',saved.visibility);
+  restoreProperty(node,'pointer-events',saved.pointerEvents);
+  restoreProperty(node,'width',saved.width);
+  restoreProperty(node,'min-width',saved.minWidth);
+  restoreProperty(node,'max-width',saved.maxWidth);
+  restoreProperty(node,'overflow',saved.overflow);
+}
+
+function chooseShellNodes(aside){
+  var nodes=[aside];
+  var current=aside;
+  for(var depth=0;depth<6;depth+=1){
+    var parent=current.parentElement;
+    if(!parent||parent===aside.ownerDocument.body||parent===aside.ownerDocument.documentElement)break;
+    if(containsMainWheel(parent))break;
+    var rect=parent.getBoundingClientRect();
+    var acceptable=(rect.width===0||rect.width<=560)&&hasPanelTerms(parent);
+    if(!acceptable)break;
+    nodes.push(parent);
+    current=parent;
+  }
+  var shell=nodes[nodes.length-1];
+  var shellParent=shell.parentElement;
+  if(shellParent){
+    var siblings=Array.prototype.slice.call(shellParent.children);
+    for(var i=0;i<siblings.length;i+=1){
+      var sibling=siblings[i];
+      if(sibling===shell||containsMainWheel(sibling))continue;
+      var rect=sibling.getBoundingClientRect();
+      var style=getComputedStyle(sibling);
+      var verticalRail=(rect.width>0&&rect.width<=42&&rect.height>=Math.max(240,innerHeight*.45));
+      var overflowRail=/auto|scroll/.test(style.overflowY||'');
+      if(verticalRail||overflowRail)nodes.push(sibling);
+    }
+  }
+  return nodes.filter(function(node,index,array){return node&&array.indexOf(node)===index;});
+}
+
+function ensurePanelCache(){
+  if(panel&&panel.isConnected&&shellNodes.length)return true;
+  panel=findPanelAcrossDocuments();
+  if(!panel)return false;
+  shellNodes=chooseShellNodes(panel);
+  for(var i=0;i<shellNodes.length;i+=1)remember(shellNodes[i]);
+  return shellNodes.length>0;
+}
+
+function ensureAuthoritativeLayoutStyle(doc){
+  if(!doc||doc.getElementById('v85AuthoritativePanelLayoutStyle'))return;
+  var style=doc.createElement('style');
+  style.id='v85AuthoritativePanelLayoutStyle';
+  style.textContent=''
+    +'body.v85-panel-hidden .control-panel,body.v85-panel-hidden .page-scrollbar{display:none!important;visibility:hidden!important;pointer-events:none!important;}'
+    +'body.v85-panel-hidden .work-frame{left:0!important;right:0!important;width:100%!important;min-width:100%!important;max-width:100%!important;margin:0!important;transform:none!important;translate:none!important;box-sizing:border-box!important;}';
+  doc.head.appendChild(style);
+}
+
+function findToolbarDock(){
+  var found=null;
+  try{
+    visit(frame.contentDocument,function(doc){
+      if(!found)found=doc.getElementById('v62MetalDock');
+    },0);
+  }catch(error){}
+  return found;
+}
+
+function applyAuthoritativeLayout(){
+  if(!panel||!panel.ownerDocument)return false;
+  var doc=panel.ownerDocument;
+  ensureAuthoritativeLayoutStyle(doc);
+  doc.body.classList.toggle('v85-panel-hidden',!panelVisible);
+  var dock=findToolbarDock();
+  if(dock){
+    dock.style.removeProperty('left');
+    dock.style.removeProperty('right');
+    dock.removeAttribute('data-v85-panel-hidden-left');
+    dock.dataset.v86ToolbarRightPreserved='true';
+  }
+  doc.documentElement.dataset.v85AuthoritativePanelLayout=panelVisible?'visible':'hidden';
+  return true;
+}
+
+function applyPanelState(){
+  if(!ensurePanelCache())return false;
+  for(var i=0;i<shellNodes.length;i+=1){
+    var node=shellNodes[i];
+    if(panelVisible){
+      restoreNode(node);
+      node.removeAttribute('aria-hidden');
+    }else{
+      node.style.setProperty('display','none','important');
+      node.style.setProperty('visibility','hidden','important');
+      node.style.setProperty('pointer-events','none','important');
+      node.style.setProperty('width','0','important');
+      node.style.setProperty('min-width','0','important');
+      node.style.setProperty('max-width','0','important');
+      node.style.setProperty('overflow','hidden','important');
+      node.setAttribute('aria-hidden','true');
+    }
+  }
+  applyAuthoritativeLayout();
+  return true;
+}
+
+function findPanelButton(){
+  var found=null;
+  try{
+    visit(frame.contentDocument,function(doc){
+      if(found)return;
+      found=doc.getElementById('v66PanelBtn')||doc.getElementById('v65PanelToggleBtn');
+    },0);
+  }catch(error){}
+  return found;
+}
+
+function syncButton(button){
+  if(!button)return;
+  button.dataset.hidden=panelVisible?'false':'true';
+  button.title=panelVisible?'إخفاء لوحة المخطط / Hide chart panel':'إظهار لوحة المخطط / Show chart panel';
+  button.setAttribute('aria-label',button.title);
+  button.style.setProperty('pointer-events','auto','important');
+  button.style.setProperty('cursor','pointer','important');
+}
+
+function bindButton(){
+  var button=findPanelButton();
+  if(!button)return false;
+  if(button.dataset.v67Bound!=='true'){
+    button.dataset.v67Bound='true';
+    button.addEventListener('click',function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      ensurePanelCache();
+      panelVisible=!panelVisible;
+      writeState();
+      applyPanelState();
+      syncButton(button);
+    },true);
+  }
+  syncButton(button);
+  return true;
+}
+
+function audit(){
+  var button=findPanelButton();
+  if(!button)return;
+  try{
+    button.ownerDocument.defaultView.__auditKawkabatPanelToggleCachedV67=function(){
+      return{
+        ok:button.dataset.v67Bound==='true'&&shellNodes.length>0,
+        sourceVersion:'V66',
+        panelButtonBound:button.dataset.v67Bound==='true',
+        panelCached:!!panel,
+        cachedShellNodeCount:shellNodes.length,
+        panelVisible:panelVisible,
+        authoritativeLayoutOwner:'V86',
+        toolbarPosition:'original-right',
+        bodyClassApplied:!!(panel&&panel.ownerDocument.body.classList.contains('v85-panel-hidden'))===!panelVisible,
+        workFrameGeometryControlledAtSource:true,
+        crossIframeGeometryRewrite:false,
+        resizeLoop:false,
+        capturePhaseBinding:true,
+        scrollbarIncluded:shellNodes.length>1,
+        wheelGeometryChanged:false,
+        ornateFrameChanged:false
+      };
+    };
+  }catch(error){}
+}
+
+function tick(){
+  bindButton();
+  applyPanelState();
+  audit();
+}
+
+function start(){
+  panelVisible=readState();
+  if(timer)clearInterval(timer);
+  timer=setInterval(tick,60);
+  tick();
+}
+
+frame.addEventListener('load',start);
+start();
+}());
+</script>
+</body>
+</html>

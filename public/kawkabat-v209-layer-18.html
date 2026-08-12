@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — V41 Hide Toolbar Lock Only V42</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-19.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var observer=null;
+var poll=null;
+var hiddenButtons=[];
+var HIDDEN_ATTRIBUTE='data-v42-toolbar-lock-hidden';
+var LOCK_LABELS=['🔒','🔐'];
+
+function locateWheelDocument(doc,depth){
+  if(!doc||depth>110)return null;
+  if(doc.getElementById('wheel'))return doc;
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){
+    try{
+      var found=locateWheelDocument(frames[i].contentDocument,depth+1);
+      if(found)return found;
+    }catch(error){}
+  }
+  return null;
+}
+
+function clean(value){
+  return String(value||'').replace(/\s+/g,'').trim();
+}
+
+function isToolbarLockButton(button){
+  if(!button||button.tagName!=='BUTTON')return false;
+  var label=clean(button.textContent);
+  var title=String(button.getAttribute('title')||'');
+  var aria=String(button.getAttribute('aria-label')||'');
+  var named=/قفل الرسومات|فتح قفل الرسومات|Lock drawings|Unlock drawings/i.test(title+' '+aria);
+  if(LOCK_LABELS.indexOf(label)===-1&&!named)return false;
+  var rect=button.getBoundingClientRect();
+  return !!rect&&rect.width>0&&rect.height>0&&rect.top>=0&&rect.bottom<=96;
+}
+
+function hideLockButton(button){
+  if(!button)return false;
+  if(hiddenButtons.indexOf(button)===-1)hiddenButtons.push(button);
+  button.setAttribute(HIDDEN_ATTRIBUTE,'true');
+  button.setAttribute('aria-hidden','true');
+  button.style.setProperty('display','none','important');
+  button.style.setProperty('visibility','hidden','important');
+  button.style.setProperty('pointer-events','none','important');
+  button.style.setProperty('width','0','important');
+  button.style.setProperty('min-width','0','important');
+  button.style.setProperty('height','0','important');
+  button.style.setProperty('padding','0','important');
+  button.style.setProperty('margin','0','important');
+  button.style.setProperty('border','0','important');
+  return true;
+}
+
+function applyHideToolbarLock(){
+  try{
+    var doc=locateWheelDocument(frame.contentDocument,0);
+    if(!doc)return false;
+    var buttons=Array.prototype.slice.call(doc.querySelectorAll('button'));
+    buttons.forEach(function(button){
+      if(isToolbarLockButton(button))hideLockButton(button);
+    });
+
+    var visibleLocks=buttons.filter(function(button){
+      return isToolbarLockButton(button)&&button.getAttribute(HIDDEN_ATTRIBUTE)!=='true';
+    });
+    var arrowButtons=buttons.filter(function(button){return clean(button.textContent)==='↖';});
+    var lockHidden=hiddenButtons.length>0&&visibleLocks.length===0;
+
+    doc.documentElement.dataset.toolbarLockHiddenOnlyV42=String(lockHidden);
+    doc.documentElement.dataset.v42HiddenLockButtonCount=String(hiddenButtons.length);
+    doc.documentElement.dataset.v42ArrowButtonCount=String(arrowButtons.length);
+
+    var view=doc.defaultView;
+    if(view){
+      view.__auditKawkabatHideToolbarLockOnlyV42=function(){
+        return{
+          ok:lockHidden&&arrowButtons.length>0,
+          sourceVersion:'V41',
+          changedArea:'top-toolbar-lock-button-only',
+          lockButtonHidden:lockHidden,
+          hiddenLockButtonCount:hiddenButtons.length,
+          selectionArrowHidden:false,
+          otherToolbarButtonsChanged:false,
+          settingsPanelChanged:false,
+          instantWhiteFillChanged:false,
+          wheelGeometryChanged:false,
+          ornateFrameChanged:false,
+          angleTicksInnerCopperBoundaryChanged:false
+        };
+      };
+    }
+
+    if(!observer&&doc.body){
+      observer=new MutationObserver(function(){applyHideToolbarLock();});
+      observer.observe(doc.body,{childList:true,subtree:true,attributes:true,attributeFilter:['title','aria-label','style']});
+    }
+    return lockHidden;
+  }catch(error){
+    return false;
+  }
+}
+
+function start(){
+  if(observer){observer.disconnect();observer=null;}
+  if(poll){clearInterval(poll);poll=null;}
+  hiddenButtons=[];
+  var attempts=0;
+  poll=setInterval(function(){
+    attempts+=1;
+    applyHideToolbarLock();
+    if(attempts>=2600){clearInterval(poll);poll=null;}
+  },100);
+}
+
+frame.addEventListener('load',start);
+start();
+}());
+</script>
+</body>
+</html>

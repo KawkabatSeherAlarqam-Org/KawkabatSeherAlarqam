@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — V29 + Complete Round Outer Frames V30</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-26.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+
+    var appFrame=document.getElementById('appFrame');
+    var poll=null;
+
+    function locateWheelDocument(doc,depth){
+      if(!doc||depth>40)return null;
+      if(doc.getElementById('wheel'))return doc;
+      var frames=doc.querySelectorAll('iframe');
+      for(var index=0;index<frames.length;index+=1){
+        try{
+          var found=locateWheelDocument(frames[index].contentDocument,depth+1);
+          if(found)return found;
+        }catch(error){}
+      }
+      return null;
+    }
+
+    function radiiSnapshot(group){
+      if(!group)return[];
+      return Array.prototype.map.call(group.querySelectorAll('circle'),function(circle){
+        return{
+          className:circle.getAttribute('class')||'',
+          radius:circle.getAttribute('r'),
+          strokeWidth:circle.getAttribute('stroke-width')||''
+        };
+      });
+    }
+
+    function applyCompleteRoundFrames(){
+      try{
+        var wheelDoc=locateWheelDocument(appFrame.contentDocument,0);
+        if(!wheelDoc)return false;
+
+        var wheel=wheelDoc.getElementById('wheel');
+        var outerFrame=wheelDoc.getElementById('outerBlackFrame');
+        if(!wheel||!outerFrame)return false;
+
+        var geometryBefore=JSON.stringify(radiiSnapshot(outerFrame));
+        var viewBoxBefore=wheel.getAttribute('viewBox');
+
+        var style=wheelDoc.getElementById('v30CompleteRoundOuterFramesStyle');
+        if(!style){
+          style=wheelDoc.createElement('style');
+          style.id='v30CompleteRoundOuterFramesStyle';
+          (wheelDoc.head||wheelDoc.documentElement).appendChild(style);
+        }
+
+        style.textContent='\n'
+          + 'svg#wheel{overflow:visible!important;}\n'
+          + '#outerBlackFrame circle{shape-rendering:geometricPrecision!important;}\n';
+
+        wheel.setAttribute('overflow','visible');
+        wheel.style.setProperty('overflow','visible','important');
+        outerFrame.style.setProperty('overflow','visible','important');
+
+        var geometryAfter=JSON.stringify(radiiSnapshot(outerFrame));
+        var viewBoxAfter=wheel.getAttribute('viewBox');
+
+        wheelDoc.documentElement.dataset.completeRoundOuterFramesV30='true';
+        wheelDoc.documentElement.dataset.outerFrameClippingRemoved='true';
+        wheelDoc.documentElement.dataset.outerFrameGeometryChanged=String(geometryBefore!==geometryAfter);
+        wheelDoc.documentElement.dataset.viewBoxChanged=String(viewBoxBefore!==viewBoxAfter);
+
+        if(wheelDoc.defaultView){
+          wheelDoc.defaultView.__auditKawkabatCompleteRoundOuterFramesV30=function(){
+            return{
+              ok:wheel.getAttribute('overflow')==='visible'&&geometryBefore===geometryAfter&&viewBoxBefore===viewBoxAfter,
+              changedArea:'outer-frame-rendering-visibility-only',
+              outerFrameClippingRemoved:true,
+              geometryChanged:geometryBefore!==geometryAfter,
+              viewBoxChanged:viewBoxBefore!==viewBoxAfter,
+              angleBandChanged:false,
+              brownLineChanged:false,
+              angleNumbersChanged:false,
+              angleTicksChanged:false,
+              zodiacChanged:false,
+              wheelNumbersChanged:false,
+              innerWheelGeometryChanged:false
+            };
+          };
+        }
+        return true;
+      }catch(error){
+        return false;
+      }
+    }
+
+    function startPolling(){
+      if(poll)clearInterval(poll);
+      var attempts=0;
+      poll=setInterval(function(){
+        attempts+=1;
+        if(applyCompleteRoundFrames()||attempts>=1300){
+          clearInterval(poll);
+          poll=null;
+        }
+      },100);
+    }
+
+    appFrame.addEventListener('load',startPolling);
+    startPolling();
+  }());
+  </script>
+</body>
+</html>

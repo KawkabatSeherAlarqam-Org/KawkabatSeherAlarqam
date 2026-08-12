@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — Center Anchor + Cardinal Colors V12</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-40.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+
+    var appFrame=document.getElementById('appFrame');
+    var NS='http://www.w3.org/2000/svg';
+    var CX=2200,CY=1800;
+    var observer=null;
+    var timer=null;
+    var poll=null;
+    var observedWheel=null;
+
+    function locateWheelDocument(doc,depth){
+      if(!doc||depth>6)return null;
+      if(doc.getElementById('wheel'))return doc;
+      var ids=['workFrame','appFrame'];
+      for(var i=0;i<ids.length;i+=1){
+        var frame=doc.getElementById(ids[i]);
+        try{
+          var child=frame&&frame.contentDocument;
+          var found=locateWheelDocument(child,depth+1);
+          if(found)return found;
+        }catch(error){}
+      }
+      return null;
+    }
+
+    function polar(radius,degree){
+      var angle=degree*Math.PI/180;
+      return{x:CX+Math.cos(angle)*radius,y:CY+Math.sin(angle)*radius};
+    }
+
+    function makePath(className,pathData){
+      var node=document.createElementNS(NS,'path');
+      node.setAttribute('class',className);
+      node.setAttribute('d',pathData);
+      node.setAttribute('pointer-events','none');
+      node.setAttribute('data-cardinal-colors-v12','true');
+      return node;
+    }
+
+    function sectorPath(innerRadius,outerRadius,startDegree,endDegree){
+      var outerStart=polar(outerRadius,startDegree);
+      var outerEnd=polar(outerRadius,endDegree);
+      var innerEnd=polar(innerRadius,endDegree);
+      var innerStart=polar(innerRadius,startDegree);
+      return [
+        'M',outerStart.x.toFixed(3),outerStart.y.toFixed(3),
+        'A',outerRadius,outerRadius,0,0,1,outerEnd.x.toFixed(3),outerEnd.y.toFixed(3),
+        'L',innerEnd.x.toFixed(3),innerEnd.y.toFixed(3),
+        'A',innerRadius,innerRadius,0,0,0,innerStart.x.toFixed(3),innerStart.y.toFixed(3),
+        'Z'
+      ].join(' ');
+    }
+
+    function arcPath(radius,startDegree,endDegree){
+      var start=polar(radius,startDegree);
+      var end=polar(radius,endDegree);
+      return [
+        'M',start.x.toFixed(3),start.y.toFixed(3),
+        'A',radius,radius,0,0,1,end.x.toFixed(3),end.y.toFixed(3)
+      ].join(' ');
+    }
+
+    function uniqueCircleRadii(frames){
+      var values=[];
+      frames.querySelectorAll('circle.frame-metal').forEach(function(circle){
+        var radius=Number(circle.getAttribute('r'));
+        if(Number.isFinite(radius))values.push(radius);
+      });
+      values.sort(function(a,b){return a-b;});
+      return values.filter(function(value,index,array){
+        return index===0||Math.abs(value-array[index-1])>0.01;
+      });
+    }
+
+    function removeOwnedChildren(group){
+      if(!group)return;
+      group.querySelectorAll('[data-cardinal-colors-v12="true"]').forEach(function(node){node.remove();});
+    }
+
+    function restoreCardinalColors(){
+      try{
+        var wheelDoc=locateWheelDocument(appFrame.contentDocument,0);
+        if(!wheelDoc)return false;
+        var wheel=wheelDoc.getElementById('wheel');
+        var frames=wheelDoc.getElementById('frames');
+        var specialFills=wheelDoc.getElementById('specialFills');
+        var specialArcs=wheelDoc.getElementById('specialArcs');
+        if(!wheel||!frames||!specialFills||!specialArcs)return false;
+
+        var viewMode=wheelDoc.documentElement.dataset.viewMode||'circle36';
+        if(viewMode!=='circle36'){
+          removeOwnedChildren(specialFills);
+          removeOwnedChildren(specialArcs);
+          return true;
+        }
+
+        var radii=uniqueCircleRadii(frames);
+        if(radii.length<2)return false;
+
+        var signature=radii.map(function(value){return value.toFixed(2);}).join('|');
+        var expectedFills=4*(radii.length-1);
+        var expectedArcs=4*radii.length*3;
+        var ownedFills=specialFills.querySelectorAll('[data-cardinal-colors-v12="true"]').length;
+        var ownedArcs=specialArcs.querySelectorAll('[data-cardinal-colors-v12="true"]').length;
+        if(specialFills.getAttribute('data-cardinal-signature-v12')===signature&&ownedFills===expectedFills&&ownedArcs===expectedArcs){
+          return true;
+        }
+
+        removeOwnedChildren(specialFills);
+        removeOwnedChildren(specialArcs);
+
+        [0,90,180,270].forEach(function(centerDegree){
+          var startDegree=centerDegree-95;
+          var endDegree=centerDegree-85;
+
+          for(var ring=0;ring<radii.length-1;ring+=1){
+            specialFills.appendChild(makePath('special-fill',sectorPath(radii[ring],radii[ring+1],startDegree,endDegree)));
+          }
+
+          radii.forEach(function(radius){
+            var data=arcPath(radius,startDegree,endDegree);
+            specialArcs.appendChild(makePath('special-arc-shadow',data));
+            specialArcs.appendChild(makePath('special-arc-metal',data));
+            specialArcs.appendChild(makePath('special-arc-highlight',data));
+          });
+        });
+
+        specialFills.setAttribute('data-cardinal-signature-v12',signature);
+        specialArcs.setAttribute('data-cardinal-signature-v12',signature);
+        wheelDoc.documentElement.dataset.cardinalColorsRestored='true';
+        wheelDoc.documentElement.dataset.cardinalColorDirections='0,90,180,270';
+
+        if(observedWheel!==wheel){
+          if(observer)observer.disconnect();
+          observer=new MutationObserver(scheduleRestore);
+          observer.observe(wheel,{childList:true,subtree:true});
+          observedWheel=wheel;
+        }
+
+        if(wheelDoc.defaultView){
+          wheelDoc.defaultView.__auditKawkabatCardinalColorsV12=function(){
+            return{
+              ok:specialFills.querySelectorAll('[data-cardinal-colors-v12="true"]').length===expectedFills&&specialArcs.querySelectorAll('[data-cardinal-colors-v12="true"]').length===expectedArcs,
+              changedArea:'four-cardinal-color-bands-only',
+              directions:[0,90,180,270],
+              radiusCount:radii.length,
+              fillCount:specialFills.querySelectorAll('[data-cardinal-colors-v12="true"]').length,
+              arcLayerCount:specialArcs.querySelectorAll('[data-cardinal-colors-v12="true"]').length,
+              numbersChanged:false,
+              valuesChanged:false,
+              geometryChanged:false,
+              centerAnchorChanged:false,
+              frameChanged:false
+            };
+          };
+        }
+        return true;
+      }catch(error){
+        return false;
+      }
+    }
+
+    function scheduleRestore(){
+      if(timer)clearTimeout(timer);
+      timer=setTimeout(function(){timer=null;restoreCardinalColors();},40);
+    }
+
+    function startPolling(){
+      if(poll)clearInterval(poll);
+      var attempts=0;
+      poll=setInterval(function(){
+        attempts+=1;
+        if(restoreCardinalColors()||attempts>=400){
+          clearInterval(poll);
+          poll=null;
+        }
+      },100);
+    }
+
+    appFrame.addEventListener('load',startPolling);
+    startPolling();
+  }());
+  </script>
+</body>
+</html>

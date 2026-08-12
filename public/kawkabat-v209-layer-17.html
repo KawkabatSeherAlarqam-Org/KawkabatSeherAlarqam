@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Original Frame Display + Top Right Toolbar V47</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+#v47ToolbarDock{position:fixed;top:0;right:4px;z-index:2147483647;pointer-events:none}
+#v47Toolbar{pointer-events:auto;display:inline-flex;align-items:center;gap:3px;height:29px;padding:2px 6px;border:1px solid #88959f;border-top-color:#d1d7dd;border-left-color:#d1d7dd;border-radius:3px;background:linear-gradient(180deg,#eef3f6 0%,#dfe7ed 46%,#c7d0d8 50%,#edf3f7 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.98),0 1px 2px rgba(58,67,74,.36);white-space:nowrap;font:12px Arial,sans-serif}
+.v47btn{width:23px;min-width:23px;height:23px;margin:0;padding:0;border:1px solid #a4afb7;border-top-color:#dbe1e6;border-left-color:#dbe1e6;border-radius:2px;background:linear-gradient(180deg,#fefefe 0%,#eef3f7 46%,#d8e0e7 52%,#fafcfd 100%);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.95)}
+.v47btn:hover{background:linear-gradient(180deg,#fff7e8 0%,#f3e3be 46%,#e1bf80 52%,#fff5e4 100%);border-color:#b68849}
+.v47btn.active{background:linear-gradient(180deg,#f7ead4 0%,#ecd4ac 46%,#d7af73 52%,#f6e6c7 100%);border-color:#b78643}
+.v47btn svg{width:15px;height:15px;display:block}
+.v47sep{width:1px;height:18px;margin:0 2px;background:#9ba8b2;box-shadow:1px 0 0 rgba(255,255,255,.82)}
+.v47wrap{position:relative;display:inline-flex;align-items:center}
+.v47select{height:23px;padding:0 20px 0 6px;border:1px solid #a7b1b9;border-top-color:#d8dee3;border-left-color:#d8dee3;border-radius:2px;background:linear-gradient(180deg,#fefefe 0%,#eef3f7 48%,#dbe3ea 52%,#fbfcfd 100%);font:12px Arial,sans-serif;color:#243039;appearance:none;-webkit-appearance:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.96)}
+.v47wrap:after{content:"";position:absolute;right:6px;top:9px;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #49545d;pointer-events:none}
+#v47Zoom{min-width:66px;font-weight:700}
+#v47Language{min-width:108px;padding-left:27px}
+.v47flag{position:absolute;left:6px;top:5px;width:15px;height:11px;border:1px solid rgba(75,75,75,.35);box-shadow:0 0 0 1px rgba(255,255,255,.45) inset;border-radius:1px;pointer-events:none;background:linear-gradient(90deg,transparent 0 37%,#fff 37% 63%,transparent 63%),linear-gradient(transparent 0 36%,#fff 36% 64%,transparent 64%),linear-gradient(90deg,transparent 0 42%,#c8102e 42% 58%,transparent 58%),linear-gradient(transparent 0 41%,#c8102e 41% 59%,transparent 59%),linear-gradient(33deg,transparent 0 43%,#fff 43% 49%,transparent 49% 51%,#fff 51% 57%,transparent 57%),linear-gradient(147deg,transparent 0 43%,#fff 43% 49%,transparent 49% 51%,#fff 51% 57%,transparent 57%),linear-gradient(33deg,transparent 0 46%,#c8102e 46% 48.5%,transparent 48.5% 51.5%,#c8102e 51.5% 54%,transparent 54%),linear-gradient(147deg,transparent 0 46%,#c8102e 46% 48.5%,transparent 48.5% 51.5%,#c8102e 51.5% 54%,transparent 54%),#012169}
+@media(max-width:760px){#v47ToolbarDock{right:2px}.v47btn.optional{display:none}#v47Language{min-width:84px}}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-18.html"></iframe>
+<div id="v47ToolbarDock">
+  <div id="v47Toolbar" role="toolbar" aria-label="Classic icon toolbar">
+    <button class="v47btn active" type="button" title="Select drawings" data-action="↖"><svg viewBox="0 0 14 14"><ellipse cx="7" cy="7" rx="5" ry="3.5" fill="none" stroke="#8d540b" stroke-width="1.25"/><circle cx="7" cy="7" r="1.8" fill="#3d2a18"/><circle cx="7.6" cy="6.4" r=".48" fill="#f1d19d"/></svg></button>
+    <button class="v47btn" type="button" title="Draw line" data-action="—"><svg viewBox="0 0 14 14"><path d="M2.2 11.2l2.2-.5 5.7-5.7-1.6-1.6-5.7 5.7-.6 2.1z" fill="#dcb953" stroke="#8d6c14" stroke-width=".7"/><path d="M8.8 2.4L10.4 4l1-.9c.4-.4.4-1 0-1.4l-.2-.2c-.4-.4-1-.4-1.4 0l-1 .9z" fill="#ecd67a" stroke="#8d6c14" stroke-width=".7"/></svg></button>
+    <button class="v47btn" type="button" title="Draw rectangle" data-action="▢"><svg viewBox="0 0 14 14"><path d="M2.6 10.9L11 2.9" stroke="#cfb24d" stroke-width="1.7" stroke-linecap="round"/><circle cx="3.6" cy="10" r="1.2" fill="#d9bc55" stroke="#8a6b15" stroke-width=".45"/></svg></button>
+    <button class="v47btn" type="button" title="Add text" data-action="T"><svg viewBox="0 0 14 14"><path d="M3 11L11 3" stroke="#8ea1b1" stroke-width="1.2"/><path d="M4.3 3.4h4.6M7 3.4v7.2" stroke="#8ea1b1" stroke-width="1.1"/></svg></button>
+    <button class="v47btn" type="button" title="Show or hide drawing tools" data-action="⌕"><svg viewBox="0 0 14 14"><path d="M7 2.3v9.4M2.3 7h9.4" stroke="#6e95b8" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button class="v47btn" type="button" title="Fullscreen" data-action="⛶"><svg viewBox="0 0 14 14"><path d="M3 5.5V3h2.5M8.5 3H11v2.5M11 8.5V11H8.5M5.5 11H3V8.5" fill="none" stroke="#7696b0" stroke-width="1.15" stroke-linecap="round"/></svg></button>
+    <span class="v47sep"></span>
+    <span class="v47wrap"><select id="v47Zoom" class="v47select" title="Zoom"><option>100%</option><option>125%</option><option selected>150%</option><option>175%</option><option>200%</option></select></span>
+    <button class="v47btn optional" type="button" title="Rotate left"><svg viewBox="0 0 14 14"><path d="M10.4 4A4.6 4.6 0 1 0 10.7 9" fill="none" stroke="#7696b0" stroke-width="1.15"/><path d="M10.2 2.2v2.4H7.8" fill="none" stroke="#7696b0" stroke-width="1.15"/></svg></button>
+    <button class="v47btn optional" type="button" title="Fit view"><svg viewBox="0 0 14 14"><path d="M2.5 4.7V2.5h2.2M9.3 2.5h2.2v2.2M11.5 9.3v2.2H9.3M4.7 11.5H2.5V9.3" fill="none" stroke="#7898b2" stroke-width="1.1"/></svg></button>
+    <button class="v47btn optional" type="button" title="Refresh"><svg viewBox="0 0 14 14"><path d="M3.4 4.3A4.5 4.5 0 1 1 3.1 8.9" fill="none" stroke="#7898b2" stroke-width="1.1"/><path d="M2.6 2.8v2.5h2.5" fill="none" stroke="#7898b2" stroke-width="1.1"/></svg></button>
+    <span class="v47sep"></span>
+    <span class="v47wrap"><span class="v47flag"></span><select id="v47Language" class="v47select" title="Language"><option selected>English</option><option>العربية</option></select></span>
+  </div>
+</div>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+function clean(v){return String(v||'').replace(/\s+/g,'').trim();}
+function locate(doc,depth){
+  if(!doc||depth>120)return null;
+  if(doc.getElementById('wheel'))return doc;
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){try{var found=locate(frames[i].contentDocument,depth+1);if(found)return found;}catch(error){}}
+  return null;
+}
+function trigger(label){
+  try{
+    var doc=locate(frame.contentDocument,0);
+    if(!doc)return;
+    var buttons=doc.querySelectorAll('button');
+    for(var i=0;i<buttons.length;i+=1){if(clean(buttons[i].textContent)===label){buttons[i].click();return;}}
+  }catch(error){}
+}
+document.querySelectorAll('[data-action]').forEach(function(button){button.addEventListener('click',function(){trigger(button.getAttribute('data-action'));});});
+window.__auditKawkabatOriginalFrameDisplayTopRightToolbarV47=function(){
+  var bar=document.getElementById('v47Toolbar');
+  var rect=bar?bar.getBoundingClientRect():null;
+  return{ok:!!bar&&!!rect&&rect.width>0&&rect.height>0,sourceVersion:'V42',changedArea:'independent-top-right-toolbar-overlay-only',toolbarTop:rect?rect.top:null,toolbarRightGap:rect?Math.max(0,document.documentElement.clientWidth-rect.right):null,wheelViewportChanged:false,wheelScaleChanged:false,wheelGeometryChanged:false,ornateFrameDisplayChanged:false,ornateFrameChanged:false,angleTicksInnerCopperBoundaryChanged:false,lockButtonIncluded:false};
+};
+}());
+</script>
+</body>
+</html>

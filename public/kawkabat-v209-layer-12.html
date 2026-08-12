@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Hide Icons Between Zoom and Language V59</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" allowfullscreen src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-13.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var timer=null;
+
+function visitDocuments(doc,callback,depth){
+  if(!doc||depth>180)return;
+  callback(doc);
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){
+    try{visitDocuments(frames[i].contentDocument,callback,depth+1);}catch(error){}
+  }
+}
+
+function hideBetweenZoomAndLanguage(toolbar){
+  var zoom=toolbar.querySelector('#v47Zoom');
+  var language=toolbar.querySelector('#v47Language');
+  if(!zoom||!language)return false;
+  var zoomWrap=zoom.closest('.v47wrap')||zoom;
+  var languageWrap=language.closest('.v47wrap')||language;
+  var node=zoomWrap.nextElementSibling;
+  var hidden=0;
+  while(node&&node!==languageWrap){
+    node.style.setProperty('display','none','important');
+    node.style.setProperty('pointer-events','none','important');
+    node.setAttribute('aria-hidden','true');
+    hidden+=1;
+    node=node.nextElementSibling;
+  }
+  toolbar.ownerDocument.documentElement.dataset.v59IconsBetweenZoomAndLanguageHidden='true';
+  try{
+    toolbar.ownerDocument.defaultView.__auditKawkabatHideIconsBetweenZoomAndLanguageV59=function(){
+      return{
+        ok:hidden>0,
+        sourceVersion:'V58',
+        hiddenElementCount:hidden,
+        zoomControlKept:true,
+        languageControlKept:true,
+        iconsBetweenRemoved:true,
+        wheelGeometryChanged:false,
+        ornateFrameChanged:false
+      };
+    };
+  }catch(error){}
+  return hidden>0;
+}
+
+function apply(){
+  var done=false;
+  try{
+    visitDocuments(frame.contentDocument,function(doc){
+      var toolbar=doc.getElementById('v47Toolbar');
+      if(toolbar&&hideBetweenZoomAndLanguage(toolbar))done=true;
+    },0);
+  }catch(error){}
+  return done;
+}
+
+function start(){
+  if(timer)clearInterval(timer);
+  timer=setInterval(apply,150);
+  apply();
+}
+
+frame.addEventListener('load',start);
+start();
+}());
+</script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — V30 + Black Band Thicker Outward V31</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-25.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+
+    var appFrame=document.getElementById('appFrame');
+    var poll=null;
+    var WIDTH_ADD=8;
+    var RADIUS_ADD=WIDTH_ADD/2;
+
+    function locateWheelDocument(doc,depth){
+      if(!doc||depth>40)return null;
+      if(doc.getElementById('wheel'))return doc;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i+=1){
+        try{
+          var found=locateWheelDocument(frames[i].contentDocument,depth+1);
+          if(found)return found;
+        }catch(error){}
+      }
+      return null;
+    }
+
+    function applyBlackBandThickerOutward(){
+      try{
+        var wheelDoc=locateWheelDocument(appFrame.contentDocument,0);
+        if(!wheelDoc)return false;
+
+        var outerFrame=wheelDoc.getElementById('outerBlackFrame');
+        var view=wheelDoc.defaultView;
+        if(!outerFrame||!view)return false;
+
+        var blackBand=outerFrame.querySelector('.outer-black-band');
+        if(!blackBand)return false;
+
+        var originalR=blackBand.getAttribute('data-v31-original-r');
+        if(originalR==null){
+          originalR=blackBand.getAttribute('r');
+          blackBand.setAttribute('data-v31-original-r',originalR);
+        }
+        var radius=Number(originalR);
+        if(!Number.isFinite(radius))return false;
+
+        var originalWidth=blackBand.getAttribute('data-v31-original-width');
+        if(originalWidth==null){
+          originalWidth=view.getComputedStyle(blackBand).getPropertyValue('stroke-width')||'64px';
+          blackBand.setAttribute('data-v31-original-width',originalWidth);
+        }
+        var width=Number.parseFloat(originalWidth);
+        if(!Number.isFinite(width))return false;
+
+        blackBand.setAttribute('r',String(radius+RADIUS_ADD));
+        blackBand.style.setProperty('stroke-width',(width+WIDTH_ADD)+'px','important');
+        blackBand.style.setProperty('vector-effect','non-scaling-stroke','important');
+
+        wheelDoc.documentElement.dataset.blackBandThickerOutwardV31='true';
+        wheelDoc.documentElement.dataset.blackBandWidthAdd=String(WIDTH_ADD);
+        wheelDoc.documentElement.dataset.blackBandRadiusAdd=String(RADIUS_ADD);
+        wheelDoc.documentElement.dataset.blackBandInnerBoundaryChanged='false';
+
+        view.__auditKawkabatBlackBandThickerOutwardV31=function(){
+          return{
+            ok:true,
+            changedArea:'outer-black-band-thicker-outward-only',
+            strokeWidthBefore:width,
+            strokeWidthAfter:width+WIDTH_ADD,
+            radiusBefore:radius,
+            radiusAfter:radius+RADIUS_ADD,
+            innerBoundaryChanged:false,
+            otherFramesChanged:false,
+            angleBandChanged:false,
+            angleNumbersChanged:false,
+            angleTicksChanged:false,
+            zodiacChanged:false,
+            wheelNumbersChanged:false,
+            innerWheelGeometryChanged:false
+          };
+        };
+
+        return true;
+      }catch(error){
+        return false;
+      }
+    }
+
+    function startPolling(){
+      if(poll)clearInterval(poll);
+      var attempts=0;
+      poll=setInterval(function(){
+        attempts+=1;
+        if(applyBlackBandThickerOutward()||attempts>=1200){
+          clearInterval(poll);
+          poll=null;
+        }
+      },100);
+    }
+
+    appFrame.addEventListener('load',startPolling);
+    startPolling();
+  }());
+  </script>
+</body>
+</html>

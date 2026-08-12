@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magic Numbers Constellation — Zodiac Champagne + Comfortable Font V14</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+    #appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-38.html"></iframe>
+  <script>
+  (function(){
+    'use strict';
+
+    var appFrame=document.getElementById('appFrame');
+    var observer=null;
+    var observedGroup=null;
+    var timer=null;
+    var poll=null;
+
+    function locateWheelDocument(doc,depth){
+      if(!doc||depth>10)return null;
+      if(doc.getElementById('wheel'))return doc;
+      var frames=doc.querySelectorAll('iframe');
+      for(var index=0;index<frames.length;index+=1){
+        try{
+          var found=locateWheelDocument(frames[index].contentDocument,depth+1);
+          if(found)return found;
+        }catch(error){}
+      }
+      return null;
+    }
+
+    function applyComfortableZodiacFont(){
+      try{
+        var wheelDoc=locateWheelDocument(appFrame.contentDocument,0);
+        if(!wheelDoc)return false;
+
+        var group=wheelDoc.getElementById('allBalancedDaysZodiac');
+        if(!group)return false;
+
+        var cells=group.querySelectorAll('.day-zodiac-cell');
+        if(cells.length!==36)return false;
+
+        var dayCount=0;
+        var zodiacCount=0;
+
+        cells.forEach(function(cell){
+          var text=cell.querySelector('text');
+          if(!text)return;
+          var lines=text.querySelectorAll('tspan');
+          if(lines[0]){
+            lines[0].style.setProperty('font-size','26px','important');
+            lines[0].style.setProperty('font-weight','700','important');
+            dayCount+=1;
+          }
+          if(lines[1]){
+            lines[1].style.setProperty('font-size','29px','important');
+            lines[1].style.setProperty('font-weight','800','important');
+            zodiacCount+=1;
+          }
+          text.style.setProperty('font-family','Arial, Tahoma, sans-serif','important');
+          text.style.setProperty('pointer-events','none','important');
+        });
+
+        wheelDoc.documentElement.dataset.zodiacFontSize='29';
+        wheelDoc.documentElement.dataset.dayFontSize='26';
+        wheelDoc.documentElement.dataset.zodiacFontComfortable='true';
+
+        if(observedGroup!==group){
+          if(observer)observer.disconnect();
+          observer=new MutationObserver(scheduleApply);
+          observer.observe(group,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});
+          observedGroup=group;
+        }
+
+        if(wheelDoc.defaultView){
+          wheelDoc.defaultView.__auditKawkabatZodiacFontV14=function(){
+            return{
+              ok:dayCount===36&&zodiacCount===36,
+              changedArea:'zodiac-text-size-and-weight-only',
+              dayFontSize:26,
+              zodiacFontSize:29,
+              dayWeight:700,
+              zodiacWeight:800,
+              cellGeometryChanged:false,
+              textPositionChanged:false,
+              textRotationChanged:false,
+              colorsChanged:false,
+              valuesChanged:false,
+              numbersChanged:false,
+              framesChanged:false,
+              cardinalBandsChanged:false,
+              zodiacCellFillChanged:false
+            };
+          };
+        }
+
+        return dayCount===36&&zodiacCount===36;
+      }catch(error){
+        return false;
+      }
+    }
+
+    function scheduleApply(){
+      if(timer)clearTimeout(timer);
+      timer=setTimeout(function(){timer=null;applyComfortableZodiacFont();},50);
+    }
+
+    function startPolling(){
+      if(poll)clearInterval(poll);
+      var attempts=0;
+      poll=setInterval(function(){
+        attempts+=1;
+        if(applyComfortableZodiacFont()||attempts>=400){
+          clearInterval(poll);
+          poll=null;
+        }
+      },100);
+    }
+
+    appFrame.addEventListener('load',startPolling);
+    startPolling();
+  }());
+  </script>
+</body>
+</html>

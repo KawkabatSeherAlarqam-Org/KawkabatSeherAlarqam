@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Magic Numbers Constellation — Ornament + Toolbar Right V86 Chain</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
+#appFrame{display:block;width:100%;height:100%;border:0;background:#f7f1e3}
+</style>
+</head>
+<body>
+<iframe id="appFrame" title="Magic Numbers Constellation" allowfullscreen src="https://htmlpreview.github.io/?https://github.com/saloqbi/KawkabatSeherAlarqam/blob/main/public/kawkabat-v209-layer-05.html"></iframe>
+<script>
+(function(){
+'use strict';
+var frame=document.getElementById('appFrame');
+var timer=null;
+
+function visit(doc,callback,depth){
+  if(!doc||depth>180)return;
+  callback(doc);
+  var frames=doc.querySelectorAll('iframe');
+  for(var i=0;i<frames.length;i+=1){
+    try{visit(frames[i].contentDocument,callback,depth+1);}catch(error){}
+  }
+}
+
+function apply(){
+  var applied=false;
+  try{
+    visit(frame.contentDocument,function(doc){
+      if(applied)return;
+      var motif=doc.getElementById('v33GoldMotif');
+      var band=doc.getElementById('v33OrnamentalBand');
+      var svg=doc.getElementById('wheel');
+      if(!motif||!band||!svg)return;
+
+      var defs=doc.getElementById('v33OrnamentDefs');
+      if(!defs){
+        defs=doc.createElementNS('http://www.w3.org/2000/svg','defs');
+        defs.id='v33OrnamentDefs';
+        svg.insertBefore(defs,svg.firstChild);
+      }
+
+      if(motif.parentNode!==defs)defs.appendChild(motif);
+      motif.setAttribute('data-v74-definition-only','true');
+      motif.removeAttribute('display');
+      motif.style.removeProperty('display');
+      motif.style.removeProperty('visibility');
+      motif.style.removeProperty('opacity');
+
+      var uses=band.querySelectorAll('use[href="#v33GoldMotif"],use[xlink\\:href="#v33GoldMotif"]');
+      doc.documentElement.dataset.v74OrnamentalMotifRestored='true';
+      doc.documentElement.dataset.v74OrnamentalMotifUseCount=String(uses.length);
+
+      try{
+        doc.defaultView.__auditKawkabatRestoreOrnamentalMotifV74=function(){
+          return{
+            ok:motif.parentNode===defs&&uses.length===64,
+            sourceVersion:'V73',
+            motifDefinitionMovedIntoDefs:motif.parentNode===defs,
+            detachedMotifVisible:false,
+            repeatedOrnamentUseCount:uses.length,
+            repeatedOrnamentsPreserved:uses.length===64,
+            ornateFrameGeometryChanged:false,
+            wheelGeometryChanged:false,
+            zoomBehaviorChanged:false,
+            toolbarChanged:false
+          };
+        };
+      }catch(error){}
+      applied=true;
+    },0);
+  }catch(error){}
+  return applied;
+}
+
+function start(){
+  if(timer)clearInterval(timer);
+  timer=setInterval(function(){
+    if(apply()){
+      clearInterval(timer);
+      timer=null;
+    }
+  },120);
+  apply();
+}
+
+frame.addEventListener('load',start);
+start();
+}());
+</script>
+</body>
+</html>
