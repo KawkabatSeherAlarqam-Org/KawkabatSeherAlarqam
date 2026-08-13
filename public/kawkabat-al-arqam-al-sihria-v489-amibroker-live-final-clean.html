@@ -425,13 +425,13 @@
     'use strict';
     var outer=document.getElementById('v418-frame');
     var ENDPOINTS=[
-      'http://127.0.0.1:8768/quote',
-      'http://127.0.0.1:8768/live_quote.json'
+      'http://127.0.0.1:8770/quote',
+      'http://127.0.0.1:8770/live_quote.json'
     ];
-    var lastPrice=null,lastApplied=null,lastTimestamp=0,applyCount=0,errorCount=0;
+    var lastPrice=null,lastApplied=null,lastTimestamp=0,applyCount=0,errorCount=0,currentSymbol='WAITING';
     var gridAnchorPrice=null,anchorStartedAt=0,anchorLastRewriteAt=0,gridLocked=false;
     var GRID_SETTLE_MS=12000;
-    var activeEndpoint=null,pollBusy=false,statusBadge=null,cleanLiveButton=null;
+    var activeEndpoint=null,pollBusy=false,statusBadge=null,cleanLiveButton=null,symbolInput=null;
 
     function visit(doc,callback,depth){
       if(!doc||depth>700)return null;
@@ -448,6 +448,13 @@
     }
     function wheelDoc(){
       var r=root();return r&&visit(r,function(doc){return doc.getElementById('wheel')?doc:null;},0);
+    }
+    function canonicalEngine(){
+      var r=root();if(!r)return null;
+      return visit(r,function(doc){
+        var win=doc.defaultView;
+        return win&&typeof win.__setKawkabatCanonicalValue==='function'?{doc:doc,win:win}:null;
+      },0);
     }
     function removeLegacyConnectionUi(){
       var r=root();if(!r)return;
@@ -475,7 +482,7 @@
       if(old===cleanLiveButton&&old.isConnected)return true;
       var fresh=old.cloneNode(true);fresh.id='v482CleanLiveButton';
       fresh.removeAttribute('onclick');fresh.removeAttribute('onpointerdown');fresh.removeAttribute('onpointerup');
-      fresh.setAttribute('title','XAUUSD LIVE');fresh.setAttribute('aria-label','XAUUSD LIVE');
+      fresh.setAttribute('title','AmiBroker LIVE');fresh.setAttribute('aria-label','AmiBroker LIVE');
       fresh.style.setProperty('background','linear-gradient(#e5ffe9,#4dcc67)','important');
       fresh.style.setProperty('box-shadow','inset 0 0 0 2px #12832a,0 0 7px #20b43c','important');
       fresh.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();},true);
@@ -485,13 +492,15 @@
       var n=Number(String(value==null?'':value).replace(/,/g,'').trim());
       return Number.isFinite(n)&&n>0?n:null;
     }
-    function quotePrice(payload){
+    function quoteData(payload){
       if(payload==null)return null;
-      if(typeof payload==='number'||typeof payload==='string')return number(payload);
+      if(typeof payload==='number'||typeof payload==='string')return{price:number(payload),symbol:currentSymbol,direction:'FLAT'};
       var candidates=[payload.price,payload.last,payload.close,payload.value,payload.ltp,payload.LTP];
       if(payload.quote)candidates.push(payload.quote.price,payload.quote.last,payload.quote.close,payload.quote.ltp);
       if(payload.data)candidates.push(payload.data.price,payload.data.last,payload.data.close,payload.data.ltp);
-      for(var i=0;i<candidates.length;i++){var found=number(candidates[i]);if(found!==null)return found;}
+      var symbol=String(payload.symbol||(payload.quote&&payload.quote.symbol)||(payload.data&&payload.data.symbol)||currentSymbol||'SYMBOL').trim().toUpperCase();
+      var direction=String(payload.direction||(payload.quote&&payload.quote.direction)||(payload.data&&payload.data.direction)||'FLAT').toUpperCase();
+      for(var i=0;i<candidates.length;i++){var found=number(candidates[i]);if(found!==null)return{price:found,symbol:symbol,direction:direction};}
       return null;
     }
     function nativeSet(input,value){
@@ -505,22 +514,27 @@
     }
     function applyPrice(price){
       if(gridLocked)return true;
-      if(gridAnchorPrice===null){gridAnchorPrice=Number(price);anchorStartedAt=Date.now();}
+      if(gridAnchorPrice===null){gridAnchorPrice=Math.max(1,Math.floor(Number(price)));anchorStartedAt=Date.now();}
       var doc=controlDoc(),input=doc&&doc.querySelector('input[aria-label="Value"]');
       if(!input)return false;
-      var formatted=Number(gridAnchorPrice).toFixed(2),now=Date.now();
+      var formatted=String(gridAnchorPrice),now=Date.now(),engine=canonicalEngine();
       if(input.value!==formatted||now-anchorLastRewriteAt>=500){
-        nativeSet(input,formatted);anchorLastRewriteAt=now;
+        if(engine)engine.win.__setKawkabatCanonicalValue(formatted);
+        else nativeSet(input,formatted);
+        anchorLastRewriteAt=now;
       }
       lastApplied=Number(formatted);applyCount+=1;
       var wd=wheelDoc();
       if(wd){
         wd.documentElement.dataset.amibrokerLive='true';
-        wd.documentElement.dataset.amibrokerSymbol='XAUUSD';
-        wd.documentElement.dataset.amibrokerPrice=formatted;
+        wd.documentElement.dataset.amibrokerSymbol=currentSymbol;
+        wd.documentElement.dataset.amibrokerPrice=Number(price).toFixed(2);
+        wd.documentElement.dataset.amibrokerWheelAnchor=formatted;
       }
       if(now-anchorStartedAt>=GRID_SETTLE_MS){
-        if(input.value!==formatted)nativeSet(input,formatted);
+        if(input.value!==formatted){
+          if(engine)engine.win.__setKawkabatCanonicalValue(formatted);else nativeSet(input,formatted);
+        }
         gridLocked=true;
       }
       return true;
@@ -533,51 +547,89 @@
         statusBadge=doc.createElement('div');statusBadge.id='v482CleanLiveStatus';
         statusBadge.setAttribute('role','status');
         statusBadge.style.cssText='position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:2147483647;padding:7px 14px;border:1px solid #8a641e;border-radius:8px;background:#fff7dc;color:#65470f;font:700 14px Arial,Tahoma,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.22);direction:ltr;pointer-events:none';
-        statusBadge.textContent='XAUUSD — CONNECTING';doc.body.appendChild(statusBadge);
+        statusBadge.textContent='WAITING FOR AMIBROKER';doc.body.appendChild(statusBadge);
       }
       return statusBadge;
     }
-    function paint(online){
+    function requestSymbol(symbol){
+      symbol=String(symbol||'').trim().toUpperCase();
+      if(!symbol)return;
+      fetch('http://127.0.0.1:8770/symbol',{method:'POST',mode:'cors',cache:'no-store',headers:{'Content-Type':'text/plain'},body:symbol})
+        .then(function(response){if(!response.ok)throw new Error('HTTP '+response.status);currentSymbol=symbol;paint(false);})
+        .catch(function(){paint(false);});
+    }
+    function ensureSymbolSelector(){
+      if(symbolInput&&symbolInput.isConnected)return symbolInput;
+      var doc=controlDoc();if(!doc)return null;
+      var wrap=doc.getElementById('v489AmiBrokerSymbolSelector');
+      if(!wrap){
+        wrap=doc.createElement('div');wrap.id='v489AmiBrokerSymbolSelector';
+        wrap.style.cssText='position:fixed;top:8px;right:10px;z-index:2147483647;display:flex;align-items:center;height:34px;padding:0 6px;border:1px solid #718096;border-radius:5px;background:linear-gradient(#f8fbff,#dce5f0);box-shadow:0 2px 7px rgba(0,0,0,.22);direction:ltr';
+        var label=doc.createElement('span');label.textContent='Symbol';label.style.cssText='font:700 12px Arial;color:#27364a;margin:0 6px';
+        symbolInput=doc.createElement('input');symbolInput.id='v489AmiBrokerSymbolInput';symbolInput.type='text';symbolInput.autocomplete='off';symbolInput.spellcheck=false;
+        symbolInput.setAttribute('aria-label','AmiBroker symbol');symbolInput.placeholder='XAUUSD';
+        symbolInput.style.cssText='width:125px;height:24px;box-sizing:border-box;border:1px solid #8091a5;background:#fff;padding:2px 23px 2px 6px;font:700 14px Arial;color:#18283c;text-transform:uppercase';
+        var arrow=doc.createElement('button');arrow.type='button';arrow.textContent='▾';arrow.title='تطبيق الرمز';
+        arrow.style.cssText='margin-left:-22px;width:21px;height:22px;padding:0;border:0;background:#dbe5f0;color:#23364d;cursor:pointer';
+        function submit(event){if(event){event.preventDefault();event.stopPropagation();}requestSymbol(symbolInput.value);symbolInput.blur();}
+        arrow.addEventListener('click',submit);symbolInput.addEventListener('keydown',function(event){if(event.key==='Enter')submit(event);});
+        wrap.appendChild(label);wrap.appendChild(symbolInput);wrap.appendChild(arrow);doc.body.appendChild(wrap);
+      }else symbolInput=doc.getElementById('v489AmiBrokerSymbolInput');
+      return symbolInput;
+    }
+    function paint(online,direction){
       var badge=ensureBadge();if(!badge)return;
       if(online){
-        badge.textContent='XAUUSD '+Number(lastPrice).toFixed(2)+' — LIVE';
-        badge.style.background='#e6ffe9';badge.style.color='#116527';badge.style.borderColor='#23923b';
+        var arrow=direction==='UP'?' ▲':direction==='DOWN'?' ▼':' —';
+        badge.textContent=currentSymbol+' '+Number(lastPrice).toFixed(2)+arrow+' LIVE';
+        if(direction==='DOWN'){
+          badge.style.background='#ffe8e8';badge.style.color='#9d1010';badge.style.borderColor='#c62c2c';
+        }else{
+          badge.style.background='#e6ffe9';badge.style.color='#116527';badge.style.borderColor='#23923b';
+        }
       }else{
-        badge.textContent='XAUUSD — WAITING FOR AMIBROKER';
+        badge.textContent='WAITING FOR AMIBROKER';
         badge.style.background='#fff7dc';badge.style.color='#65470f';badge.style.borderColor='#8a641e';
       }
+      var selector=ensureSymbolSelector();
+      if(selector&&selector.ownerDocument.activeElement!==selector&&currentSymbol!=='WAITING')selector.value=currentSymbol;
     }
     async function readEndpoint(url){
       var response=await fetch(url+(url.indexOf('?')<0?'?':'&')+'_='+Date.now(),{
         method:'GET',mode:'cors',cache:'no-store',credentials:'omit',headers:{'Accept':'application/json'}
       });
       if(!response.ok)throw new Error('HTTP '+response.status);
-      return quotePrice(await response.json());
+      return quoteData(await response.json());
     }
     async function poll(){
       if(pollBusy)return;pollBusy=true;
       var urls=activeEndpoint?[activeEndpoint].concat(ENDPOINTS.filter(function(url){return url!==activeEndpoint;})):ENDPOINTS.slice();
-      var price=null,used=null;
+      var quote=null,used=null;
       for(var i=0;i<urls.length;i++){
-        try{price=await readEndpoint(urls[i]);if(price!==null){used=urls[i];break;}}catch(error){}
+        try{quote=await readEndpoint(urls[i]);if(quote&&quote.price!==null){used=urls[i];break;}}catch(error){}
       }
-      if(price!==null){
-        activeEndpoint=used;lastPrice=price;lastTimestamp=Date.now();applyPrice(price);paint(true);
+      if(quote&&quote.price!==null){
+        if(quote.symbol&&quote.symbol!==currentSymbol){
+          currentSymbol=quote.symbol;gridAnchorPrice=null;anchorStartedAt=0;anchorLastRewriteAt=0;gridLocked=false;
+        }
+        activeEndpoint=used;lastPrice=quote.price;lastTimestamp=Date.now();applyPrice(quote.price);paint(true,quote.direction);
       }else{
         errorCount+=1;if(Date.now()-lastTimestamp>2500)paint(false);
       }
       pollBusy=false;
     }
-    outer.addEventListener('load',function(){removeLegacyConnectionUi();installCleanLiveButton();ensureBadge();if(lastPrice!==null)applyPrice(lastPrice);});
-    setInterval(function(){try{removeLegacyConnectionUi();installCleanLiveButton();ensureBadge();poll();}catch(error){pollBusy=false;}},500);
+    outer.addEventListener('load',function(){removeLegacyConnectionUi();installCleanLiveButton();ensureBadge();ensureSymbolSelector();if(lastPrice!==null)applyPrice(lastPrice);});
+    setInterval(function(){try{removeLegacyConnectionUi();installCleanLiveButton();ensureBadge();ensureSymbolSelector();poll();}catch(error){pollBusy=false;}},500);
     poll();
     window.__auditV482CleanAmiBroker=function(){return{
       mode:lastTimestamp&&Date.now()-lastTimestamp<2500?'LIVE':'WAITING',
-      symbol:'XAUUSD',lastPrice:lastPrice,lastApplied:lastApplied,activeEndpoint:activeEndpoint,
+      symbol:currentSymbol,lastPrice:lastPrice,lastApplied:lastApplied,activeEndpoint:activeEndpoint,
       applyCount:applyCount,errorCount:errorCount,pollIntervalMs:500,
       directAmiBrokerPolling:true,legacyMessageBridge:false,legacySavedQuote:false,
       legacyConnectionModalRemoved:true,cleanLiveButton:true,
-      wheelValueEqualsInitialLivePrice:true,fixedCellNumbersPreserved:true,
+      exactLivePricePreserved:true,integerWheelAnchorFromLivePrice:true,fixedCellNumbersPreserved:true,
+      selectedAmiBrokerSymbolAutomatic:true,goldSilverAndOtherSymbolsSupported:true,
+      symbolSelectorControlsAmiBrokerChart:true,
       gridAnchorPrice:gridAnchorPrice,gridLocked:gridLocked,gridSettleMs:GRID_SETTLE_MS
     };};
   }());
