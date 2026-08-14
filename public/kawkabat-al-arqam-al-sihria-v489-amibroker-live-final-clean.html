@@ -623,7 +623,7 @@
       pollBusy=false;
     }
     outer.addEventListener('load',function(){removeLegacyConnectionUi();installCleanLiveButton();ensureBadge();ensureSymbolSelector();if(lastPrice!==null)applyPrice(lastPrice);});
-    setInterval(function(){try{removeLegacyConnectionUi();installCleanLiveButton();ensureBadge();ensureSymbolSelector();poll();}catch(error){pollBusy=false;}},500);
+    setInterval(function(){try{removeLegacyConnectionUi();installCleanLiveButton();ensureBadge();ensureSymbolSelector();poll();}catch(error){pollBusy=false;}try{window.__ensureMT5Button&&window.__ensureMT5Button();}catch(error){}},500);
     poll();
     window.__auditV482CleanAmiBroker=function(){return{
       mode:lastTimestamp&&Date.now()-lastTimestamp<2500?'LIVE':'WAITING',
@@ -636,6 +636,245 @@
       symbolSelectorControlsAmiBrokerChart:true,
       gridAnchorPrice:gridAnchorPrice,gridLocked:gridLocked,gridSettleMs:GRID_SETTLE_MS
     };};
+  }());
+  </script>
+  <script id="v483MT5TradePanel">
+  (function(){
+    'use strict';
+    var outer=document.getElementById('v418-frame');
+    var MT5_BRIDGE=(new URLSearchParams(location.search).get('mt5')||localStorage.getItem('mt5Bridge')||'http://127.0.0.1:8771').replace(/\/+$/,'');
+    window.__mt5Bridge=MT5_BRIDGE;
+    window.__setMT5Bridge=function(u){localStorage.setItem('mt5Bridge',u);location.reload();};
+
+    var mt5Icon=null,mt5Panel=null,mt5PanelDoc=null;
+    var mt5Connected=false,mt5Status=null,mt5Armed=false,mt5Positions=[],mt5Log=[];
+
+    function visit(doc,callback,depth){
+      if(!doc||depth>700)return null;
+      var result=callback(doc);if(result)return result;
+      var frames=doc.querySelectorAll('iframe');
+      for(var i=0;i<frames.length;i++){
+        try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(error){}
+      }
+      return null;
+    }
+    function root(){try{return outer.contentDocument;}catch(error){return null;}}
+    function metalBar(){var r=root();return r&&visit(r,function(doc){return doc.getElementById('v62MetalBar');},0);}
+
+    function mt5Fetch(path,options){
+      return fetch(MT5_BRIDGE+path,Object.assign({mode:'cors',cache:'no-store'},options||{}))
+        .then(function(response){
+          return response.json().catch(function(){return null;}).then(function(body){
+            return{ok:response.ok,status:response.status,body:body,networkError:null};
+          });
+        })
+        .catch(function(error){return{ok:false,status:0,body:null,networkError:String(error&&error.message||error)};});
+    }
+
+    function paintMT5Icon(){
+      if(!mt5Icon||!mt5Icon.isConnected)return;
+      var color,label;
+      if(!mt5Connected){color='#d44747';label='MT5: غير متصل';}
+      else if(mt5Armed){color='#e08a1e';label='MT5: متصل ومسلّح';}
+      else{color='#36a852';label='MT5: متصل';}
+      mt5Icon.style.setProperty('background',color,'important');
+      mt5Icon.title=label;mt5Icon.setAttribute('aria-label',label);
+    }
+
+    function describeFailure(res){
+      if(res.networkError)return res.networkError;
+      if(!res.body)return'HTTP '+res.status+' (بلا محتوى)';
+      var parts=[];
+      if(res.body.error)parts.push(res.body.error);
+      if(res.body.retcode!==undefined)parts.push('retcode='+res.body.retcode);
+      if(res.body.mt5_comment)parts.push('mt5: '+res.body.mt5_comment);
+      return parts.length?parts.join(' | '):'HTTP '+res.status;
+    }
+    function logEntry(text,kind){
+      mt5Log.unshift({text:text,kind:kind,ts:new Date().toLocaleTimeString()});
+      if(mt5Log.length>5)mt5Log.length=5;
+      paintLog();
+    }
+    function paintLog(){
+      if(!mt5PanelDoc)return;
+      var box=mt5PanelDoc.getElementById('v483Log');if(!box)return;
+      box.innerHTML=mt5Log.map(function(e){return'<div data-kind="'+e.kind+'">'+e.ts+' '+e.text.replace(/</g,'&lt;')+'</div>';}).join('');
+    }
+
+    function paintPanel(){
+      if(!mt5PanelDoc||!mt5Panel||!mt5Panel.isConnected)return;
+      var d=mt5PanelDoc;
+      var statusLine=d.getElementById('v483StatusLine'),demoBadge=d.getElementById('v483DemoBadge');
+      var armCheckbox=d.getElementById('v483Arm'),buyBtn=d.getElementById('v483Buy'),sellBtn=d.getElementById('v483Sell');
+      if(!statusLine)return;
+      if(!mt5Connected){
+        statusLine.textContent='غير متصل بالجسر ('+MT5_BRIDGE+')'+((mt5Status&&mt5Status.error)?' — '+mt5Status.error:'');
+        demoBadge.style.display='none';
+        if(buyBtn)buyBtn.disabled=true;if(sellBtn)sellBtn.disabled=true;if(armCheckbox)armCheckbox.disabled=true;
+      }else{
+        var s=mt5Status;
+        statusLine.textContent='حساب '+s.account+' @ '+s.server+' | رصيد '+Number(s.balance).toFixed(2)+' | Equity '+Number(s.equity).toFixed(2);
+        var isDemo=!!s.is_demo,blocked=!isDemo;
+        demoBadge.style.display='inline-block';
+        demoBadge.textContent=isDemo?'DEMO':'REAL';
+        demoBadge.style.setProperty('background',isDemo?'#2f9e44':'#c62c2c','important');
+        demoBadge.style.setProperty('color','#fff','important');
+        if(buyBtn)buyBtn.disabled=blocked;if(sellBtn)sellBtn.disabled=blocked;if(armCheckbox)armCheckbox.disabled=blocked;
+      }
+      if(armCheckbox&&d.activeElement!==armCheckbox)armCheckbox.checked=mt5Armed;
+      var posBox=d.getElementById('v483Positions');
+      if(posBox){
+        if(!mt5Positions.length)posBox.textContent='لا صفقات مفتوحة';
+        else posBox.innerHTML=mt5Positions.map(function(p){
+          return'<div>#'+p.ticket+' '+p.symbol+' '+p.type+' '+p.volume+' @ '+p.price_open+' | ربح '+Number(p.profit).toFixed(2)+'</div>';
+        }).join('');
+      }
+    }
+
+    function refreshStatus(){
+      mt5Fetch('/status').then(function(res){
+        mt5Connected=!!(res.body&&res.body.connected);mt5Status=res.body;
+        paintMT5Icon();paintPanel();
+      });
+      mt5Fetch('/arm').then(function(res){
+        if(res.body)mt5Armed=!!res.body.armed;
+        paintMT5Icon();paintPanel();
+      });
+      mt5Fetch('/positions').then(function(res){
+        mt5Positions=(res.body&&res.body.positions)||[];
+        paintPanel();
+      });
+    }
+
+    function jsonFloat(n){
+      n=Number(n);
+      if(!Number.isFinite(n))return'0.0';
+      return Number.isInteger(n)?n.toFixed(1):String(n);
+    }
+    function placeOrder(side){
+      var d=mt5PanelDoc;if(!d)return;
+      var symbol=(d.getElementById('v483Symbol').value||'XAUUSD').trim().toUpperCase();
+      var volume=Number(d.getElementById('v483Lot').value);
+      var sl=Number(d.getElementById('v483Sl').value);
+      var tp=Number(d.getElementById('v483Tp').value);
+      if(!(volume>0)||!(sl>0)||!(tp>0)){logEntry(side+' '+symbol+': أدخل الحجم/SL/TP قبل الإرسال','error');return;}
+      var id=symbol+'-'+Date.now()+'-'+side;
+      // sl/tp/volume built as raw JSON text (not JSON.stringify) so whole numbers
+      // still serialize with a decimal point — the bridge's order_send() call
+      // rejects an integer-typed sl/tp ("(-2) Invalid sl argument") since
+      // Python's json.loads turns a bare "4365" into an int, not a float.
+      var payload='{"id":'+JSON.stringify(id)+',"symbol":'+JSON.stringify(symbol)+',"side":'+JSON.stringify(side)+
+        ',"volume":'+jsonFloat(volume)+',"sl":'+jsonFloat(sl)+',"tp":'+jsonFloat(tp)+',"comment":"kawkabat-ui"}';
+      mt5Fetch('/order',{method:'POST',headers:{'Content-Type':'application/json'},body:payload})
+        .then(function(res){
+          if(res.body&&res.body.ok)logEntry('✔ '+side+' '+symbol+' تذكرة '+res.body.ticket+' سعر '+res.body.price,'ok');
+          else logEntry('✘ '+side+' '+symbol+': '+describeFailure(res),'error');
+          refreshStatus();
+        });
+    }
+
+    function addMT5Styles(doc){
+      if(doc.getElementById('v483MT5Style'))return;
+      var style=doc.createElement('style');style.id='v483MT5Style';
+      style.textContent=
+        '#v483MT5Panel{position:fixed;top:52px;right:8px;z-index:2147483646;display:none;width:270px;background:#fff;border:2px solid #222;border-radius:6px;box-shadow:0 9px 28px rgba(0,0,0,.38);font:12px Tahoma,Arial,sans-serif;direction:rtl;color:#222}'+
+        '#v483MT5Panel[data-open="true"]{display:block}'+
+        '#v483MT5Header{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:linear-gradient(#f4f7f9,#c4ced6);border-bottom:2px solid #536F7D;font-weight:700}'+
+        '#v483MT5Close{border:0;background:transparent;font-size:16px;cursor:pointer;color:#9C1919}'+
+        '#v483MT5Body{padding:8px 10px;max-height:72vh;overflow:auto}'+
+        '#v483StatusLine{font-size:11px;line-height:1.5}'+
+        '#v483DemoBadge{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:900;margin:5px 0}'+
+        '#v483Fields label{display:block;margin:6px 0 2px;font-weight:700}'+
+        '#v483Fields input{width:100%;box-sizing:border-box;height:24px;border:1px solid #8091a5;padding:2px 6px;font:12px Tahoma,Arial}'+
+        '#v483ArmRow{display:flex;align-items:center;gap:6px;margin:8px 0;font-weight:700}'+
+        '#v483Actions{display:flex;gap:6px;margin:6px 0}'+
+        '#v483Buy,#v483Sell{flex:1;color:#fff;border:0;height:32px;font-weight:800;cursor:pointer;border-radius:4px}'+
+        '#v483Buy{background:#2f9e44}#v483Sell{background:#c62c2c}'+
+        '#v483Buy:disabled,#v483Sell:disabled{opacity:.4;cursor:default}'+
+        '#v483Panic{width:100%;background:#8a0000;color:#fff;border:0;height:34px;font-weight:900;cursor:pointer;border-radius:4px;margin-top:2px}'+
+        '#v483Positions{margin-top:8px;border-top:1px solid #ccc;padding-top:6px;max-height:110px;overflow:auto;font-size:11px}'+
+        '#v483Log{margin-top:8px;border-top:1px solid #ccc;padding-top:6px;font-size:11px;max-height:100px;overflow:auto}'+
+        '#v483Log [data-kind="error"]{color:#9d1010}#v483Log [data-kind="ok"]{color:#116527}#v483Log [data-kind="pending"]{color:#65470f}';
+      doc.head.appendChild(style);
+    }
+
+    function ensureMT5Panel(doc){
+      if(mt5Panel&&mt5Panel.isConnected&&mt5PanelDoc===doc)return mt5Panel;
+      addMT5Styles(doc);mt5PanelDoc=doc;
+      mt5Panel=doc.getElementById('v483MT5Panel');
+      if(mt5Panel)return mt5Panel;
+      mt5Panel=doc.createElement('div');mt5Panel.id='v483MT5Panel';
+      mt5Panel.innerHTML=
+        '<div id="v483MT5Header"><span>MT5</span><button id="v483MT5Close" type="button" aria-label="إغلاق">×</button></div>'+
+        '<div id="v483MT5Body">'+
+        '<div id="v483StatusLine">—</div>'+
+        '<div id="v483DemoBadge"></div>'+
+        '<div id="v483Fields">'+
+        '<label for="v483Symbol">Symbol</label><input id="v483Symbol" type="text" value="XAUUSD">'+
+        '<label for="v483Lot">Lot Size</label><input id="v483Lot" type="number" step="0.01" min="0" value="0.01">'+
+        '<label for="v483Sl">SL</label><input id="v483Sl" type="number" step="0.01" min="0">'+
+        '<label for="v483Tp">TP</label><input id="v483Tp" type="number" step="0.01" min="0">'+
+        '</div>'+
+        '<div id="v483ArmRow"><input id="v483Arm" type="checkbox"><label for="v483Arm">ARM</label></div>'+
+        '<div id="v483Actions"><button id="v483Buy" type="button">BUY</button><button id="v483Sell" type="button">SELL</button></div>'+
+        '<button id="v483Panic" type="button">STOP ALL</button>'+
+        '<div id="v483Positions">—</div>'+
+        '<div id="v483Log"></div>'+
+        '</div>';
+      doc.body.appendChild(mt5Panel);
+      doc.getElementById('v483MT5Close').addEventListener('click',function(){mt5Panel.removeAttribute('data-open');});
+      doc.getElementById('v483Buy').addEventListener('click',function(){placeOrder('BUY');});
+      doc.getElementById('v483Sell').addEventListener('click',function(){placeOrder('SELL');});
+      doc.getElementById('v483Panic').addEventListener('click',function(){
+        mt5Fetch('/panic',{method:'POST'}).then(function(res){
+          if(res.body)mt5Armed=!!res.body.armed;
+          logEntry('STOP ALL — armed=false, صفقات مفتوحة: '+(res.body&&res.body.open_positions),'ok');
+          refreshStatus();
+        });
+      });
+      doc.getElementById('v483Arm').addEventListener('change',function(event){
+        var checkbox=event.target;
+        mt5Fetch('/arm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({armed:checkbox.checked})})
+          .then(function(res){
+            if(res.body)mt5Armed=!!res.body.armed;else logEntry('ARM: '+(res.networkError||'فشل الطلب'),'error');
+            paintPanel();
+          });
+      });
+      return mt5Panel;
+    }
+
+    function toggleMT5Panel(doc){
+      var panel=ensureMT5Panel(doc);
+      var open=panel.getAttribute('data-open')==='true';
+      if(open)panel.removeAttribute('data-open');else{panel.setAttribute('data-open','true');paintPanel();}
+    }
+
+    function ensureMT5Button(){
+      try{
+        if(mt5Icon&&mt5Icon.isConnected)return true;
+        var bar=metalBar();if(!bar)return false;
+        var doc=bar.ownerDocument;
+        mt5Icon=doc.getElementById('v483MT5Icon');
+        if(mt5Icon&&mt5Icon.isConnected){paintMT5Icon();return true;}
+        var phoneBtn=doc.getElementById('v62ConnectionBtn')||doc.getElementById('v482CleanLiveButton');
+        mt5Icon=doc.createElement('button');
+        mt5Icon.id='v483MT5Icon';mt5Icon.type='button';mt5Icon.className='v62ToolBtn';
+        mt5Icon.title='MT5';mt5Icon.setAttribute('aria-label','MT5 bridge status and trade panel');
+        mt5Icon.textContent='M5';
+        mt5Icon.style.setProperty('font','800 11px Arial,Tahoma,sans-serif','important');
+        mt5Icon.style.setProperty('color','#fff','important');
+        mt5Icon.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleMT5Panel(doc);});
+        if(phoneBtn&&phoneBtn.parentNode)phoneBtn.parentNode.insertBefore(mt5Icon,phoneBtn.nextSibling);
+        else bar.appendChild(mt5Icon);
+        paintMT5Icon();
+        return true;
+      }catch(error){return false;}
+    }
+    window.__ensureMT5Button=ensureMT5Button;
+
+    setInterval(refreshStatus,3000);
+    refreshStatus();
+    window.__auditMT5Panel=function(){return{iconInstalled:!!(mt5Icon&&mt5Icon.isConnected),panelBuilt:!!mt5Panel,connected:mt5Connected,armed:mt5Armed,bridge:MT5_BRIDGE,openPositions:mt5Positions.length};};
   }());
   </script>
 </body>
