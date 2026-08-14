@@ -1,8 +1,9 @@
-"""MT5 read-only HTTP bridge — Phase 1.
+"""MT5 HTTP bridge — Phase 2.
 
 Serves account/position/signal data from a locally running, already
-logged-in MetaTrader 5 terminal to the web UI at 127.0.0.1:8080. No
-order_send is used anywhere in this module.
+logged-in MetaTrader 5 terminal to the web UI at 127.0.0.1:8080, and
+executes orders on it (order_send/positions close) behind an explicit
+ARM switch and a hard REAL-account guard checked on every single order.
 """
 from __future__ import annotations
 
@@ -10,6 +11,7 @@ import json
 import logging
 import socket
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -25,7 +27,7 @@ MT5_TERMINAL_PATH = r"C:\Program Files\MetaTrader 5\terminal64.exe"
 MT5_STARTUP_TIMEOUT_MS = 60_000
 MT5_RECONNECT_TIMEOUT_MS = 3_000
 
-BRIDGE_VERSION = "1.0.0"
+BRIDGE_VERSION = "2.0.0"
 BRIDGE_DIR = Path(__file__).resolve().parent
 LOG_DIR = BRIDGE_DIR / "logs"
 SIGNAL_PATH = BRIDGE_DIR / "signal.json"
@@ -36,6 +38,13 @@ MARGIN_MODE_LABELS = {0: "NETTING", 1: "EXCHANGE", 2: "HEDGE"}
 VALID_SIDES = {"BUY", "SELL"}
 REQUIRED_STR_FIELDS = ("id", "symbol", "side")
 REQUIRED_NUMERIC_FIELDS = ("entry", "sl", "tp")
+
+MAX_OPEN_POSITIONS = 3
+MAX_VOLUME_PER_ORDER = 0.10
+ORDER_DEVIATION_POINTS = 20
+MAGIC_NUMBER = 954001
+TICK_WAIT_ATTEMPTS = 5
+TICK_WAIT_DELAY_S = 0.3
 
 
 class DailyFileHandler(logging.Handler):
@@ -75,6 +84,30 @@ logger.addHandler(_console_handler)
 
 app = Flask(__name__)
 CORS(app, origins=ALLOWED_ORIGINS)
+
+
+class ArmState:
+    """In-memory only, on purpose: armed always starts False on boot and is
+    never read from or written to disk. Restarting the bridge is the one
+    guaranteed way to disarm it, independent of any request that came in.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._armed = False
+        self._since = int(time.time())
+
+    def get(self) -> tuple[bool, int]:
+        with self._lock:
+            return self._armed, self._since
+
+    def set(self, armed: bool) -> None:
+        with self._lock:
+            self._armed = armed
+            self._since = int(time.time())
+
+
+ARM_STATE = ArmState()
 
 
 def ensure_connection() -> tuple[bool, str | None]:
@@ -136,6 +169,30 @@ def load_executed_ids() -> tuple[set[str] | None, str | None]:
     return ids, None
 
 
+def append_executed_id(new_id: str) -> str | None:
+    """Atomically adds new_id to executed.json. Returns an error message on
+    failure (nothing was written), or None on success.
+
+    Must be called, and must succeed, before order_send — never after. A crash
+    between order_send and this write would mean an order placed with no
+    duplicate-guard record of it, which is the one failure mode that actually
+    risks a duplicate trade on this Hedge account.
+    """
+    ids, error = load_executed_ids()
+    if ids is None:
+        return error
+    ids.add(new_id)
+    tmp_path = EXECUTED_PATH.with_suffix(".json.tmp")
+    try:
+        tmp_path.write_text(json.dumps(sorted(ids)), encoding="utf-8")
+        tmp_path.replace(EXECUTED_PATH)
+    except OSError as e:
+        message = f"فشلت كتابة executed.json: {e}"
+        logger.error(message)
+        return message
+    return None
+
+
 def validate_signal(data: dict) -> list[str]:
     issues: list[str] = []
     for field in REQUIRED_STR_FIELDS:
@@ -150,6 +207,50 @@ def validate_signal(data: dict) -> list[str]:
         if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
             issues.append(f"الحقل '{field}' يجب أن يكون رقماً موجباً")
     return issues
+
+
+def validate_order_request(data: dict) -> list[str]:
+    issues: list[str] = []
+    for field in REQUIRED_STR_FIELDS:
+        value = data.get(field)
+        if not isinstance(value, str) or not value:
+            issues.append(f"الحقل '{field}' مفقود أو ليس نصاً")
+    side = data.get("side")
+    if isinstance(side, str) and side not in VALID_SIDES:
+        issues.append(f"side يجب أن يكون BUY أو SELL، وردت '{side}'")
+    volume = data.get("volume")
+    if not isinstance(volume, (int, float)) or isinstance(volume, bool) or volume <= 0:
+        issues.append("الحقل 'volume' يجب أن يكون رقماً موجباً")
+    elif volume > MAX_VOLUME_PER_ORDER:
+        issues.append(f"الحجم {volume} يتجاوز الحد الأقصى المسموح به من الجسر ({MAX_VOLUME_PER_ORDER})")
+    for field in ("sl", "tp"):
+        value = data.get(field)
+        if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
+            issues.append(f"الحقل '{field}' يجب أن يكون رقماً موجباً")
+    return issues
+
+
+def _pick_filling_mode(symbol_info) -> int:
+    flags = symbol_info.filling_mode
+    if flags & 2:  # SYMBOL_FILLING_IOC
+        return mt5.ORDER_FILLING_IOC
+    if flags & 1:  # SYMBOL_FILLING_FOK
+        return mt5.ORDER_FILLING_FOK
+    return mt5.ORDER_FILLING_RETURN
+
+
+def _wait_for_tick(symbol: str):
+    """A freshly symbol_select()-ed symbol can report bid/ask of 0.0 for a
+    moment until the terminal receives its first quote — observed live
+    against ICMarketsSC-Demo. Retry briefly instead of pricing an order at 0.
+    """
+    tick = mt5.symbol_info_tick(symbol)
+    for _ in range(TICK_WAIT_ATTEMPTS):
+        if tick is not None and tick.bid > 0 and tick.ask > 0:
+            return tick
+        time.sleep(TICK_WAIT_DELAY_S)
+        tick = mt5.symbol_info_tick(symbol)
+    return tick
 
 
 @app.before_request
@@ -297,6 +398,258 @@ def symbols():
         "query": query,
         "symbols": sorted(s.name for s in raw),
     }), 200
+
+
+@app.route("/arm", methods=["GET"])
+def arm_get():
+    armed, since = ARM_STATE.get()
+    return jsonify({"armed": armed, "max_open": MAX_OPEN_POSITIONS, "since": since}), 200
+
+
+@app.route("/arm", methods=["POST"])
+def arm_set():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or not isinstance(body.get("armed"), bool):
+        return jsonify({"ok": False, "error": "الحقل 'armed' مطلوب ويجب أن يكون true أو false"}), 400
+    ARM_STATE.set(body["armed"])
+    armed, since = ARM_STATE.get()
+    logger.info(f"ARM set to {armed}")
+    return jsonify({"ok": True, "armed": armed, "max_open": MAX_OPEN_POSITIONS, "since": since}), 200
+
+
+@app.route("/panic", methods=["POST"])
+def panic():
+    ARM_STATE.set(False)
+    ok, err = ensure_connection()
+    if not ok:
+        logger.error(f"PANIC: disarmed, but could not read open positions: {err}")
+        return jsonify({"ok": True, "armed": False, "open_positions": None, "error": err}), 200
+    raw = mt5.positions_get()
+    count = len(raw) if raw is not None else None
+    logger.info(f"PANIC triggered: armed=false, open_positions={count}")
+    return jsonify({"ok": True, "armed": False, "open_positions": count}), 200
+
+
+def _account_guard() -> tuple["mt5.AccountInfo | None", tuple[dict, int] | None]:
+    """Shared connectivity + REAL-account check for /order and /close.
+
+    Returns (account, None) on success, or (None, (body, status)) with the
+    exact response the caller must return immediately.
+    """
+    ok, err = ensure_connection()
+    if not ok:
+        return None, ({"ok": False, "error": err}, 503)
+
+    account = mt5.account_info()
+    if account is None:
+        code, desc = mt5.last_error()
+        logger.error(f"account_info() returned None: last_error=({code}) {desc}")
+        return None, ({"ok": False, "error": "لا يوجد حساب مسجّل دخوله في التيرمينال"}, 503)
+
+    if account.trade_mode != TRADE_MODE_DEMO:
+        logger.error(f"EXECUTION BLOCKED: REAL account detected (trade_mode={account.trade_mode}), login={account.login}")
+        return None, ({"error": "REAL account detected - execution blocked"}, 403)
+
+    return account, None
+
+
+@app.route("/order", methods=["POST"])
+def order():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify({"ok": False, "error": "جسم الطلب يجب أن يكون كائن JSON صالحاً"}), 400
+
+    issues = validate_order_request(body)
+    if issues:
+        return jsonify({"ok": False, "error": "طلب غير صالح", "issues": issues}), 400
+
+    signal_id = body["id"]
+    symbol = body["symbol"]
+    side = body["side"]
+    volume = body["volume"]
+
+    # Step 1: REAL-account guard (checked on every order, not once at boot).
+    account, blocked = _account_guard()
+    if blocked is not None:
+        resp_body, status = blocked
+        return jsonify(resp_body), status
+
+    # Step 2: ARM guard.
+    armed, _since = ARM_STATE.get()
+    if not armed:
+        return jsonify({"ok": False, "error": "التسليح غير مفعّل - نفّذ POST /arm بـ {\"armed\": true} أولاً"}), 403
+
+    # Step 3: duplicate-id guard — fail safe on any doubt, never execute.
+    executed_ids, executed_error = load_executed_ids()
+    if executed_ids is None:
+        logger.error(f"/order id={signal_id} BLOCKED: executed.json uncertain: {executed_error}")
+        return jsonify({"ok": False, "error": f"تعذّر التحقق من التكرار بثقة - رُفض للأمان: {executed_error}"}), 403
+    if signal_id in executed_ids:
+        logger.info(f"/order id={signal_id} REJECTED: already executed")
+        return jsonify({"ok": False, "error": f"المعرّف '{signal_id}' نُفّذ مسبقاً"}), 403
+
+    # Step 4: max open positions.
+    open_positions = mt5.positions_get()
+    if open_positions is None:
+        code, desc = mt5.last_error()
+        logger.error(f"/order id={signal_id} BLOCKED: positions_get failed: ({code}) {desc}")
+        return jsonify({"ok": False, "error": f"تعذّرت قراءة الصفقات المفتوحة: ({code}) {desc}"}), 403
+    if len(open_positions) >= MAX_OPEN_POSITIONS:
+        logger.info(f"/order id={signal_id} REJECTED: max open positions reached ({len(open_positions)}/{MAX_OPEN_POSITIONS})")
+        return jsonify({"ok": False, "error": f"بلغ عدد الصفقات المفتوحة الحد الأقصى ({MAX_OPEN_POSITIONS})"}), 403
+
+    # Step 5: symbol exists and is tradable.
+    info = mt5.symbol_info(symbol)
+    if info is None:
+        return jsonify({"ok": False, "error": f"الرمز '{symbol}' غير موجود لدى الوسيط"}), 400
+    if not info.visible:
+        if not mt5.symbol_select(symbol, True):
+            code, desc = mt5.last_error()
+            logger.error(f"symbol_select({symbol}) failed: ({code}) {desc}")
+            return jsonify({"ok": False, "error": f"تعذّر تفعيل الرمز '{symbol}' في نافذة الأسعار"}), 400
+        info = mt5.symbol_info(symbol)
+    if info.trade_mode == mt5.SYMBOL_TRADE_MODE_DISABLED:
+        return jsonify({"ok": False, "error": f"التداول على '{symbol}' معطَّل لدى الوسيط"}), 400
+    if volume < info.volume_min or volume > info.volume_max:
+        return jsonify({
+            "ok": False,
+            "error": f"الحجم {volume} خارج نطاق الوسيط المسموح لـ '{symbol}' [{info.volume_min}, {info.volume_max}]",
+        }), 400
+
+    # Step 6: record the id BEFORE order_send — this ordering is the whole point.
+    write_error = append_executed_id(signal_id)
+    if write_error:
+        logger.error(f"/order id={signal_id} ABORTED before order_send: {write_error}")
+        return jsonify({
+            "ok": False,
+            "error": f"تعذّرت كتابة معرّف الأمان قبل التنفيذ - لم يُرسل أي أمر: {write_error}",
+        }), 500
+
+    # Step 7: order_send with SL/TP attached.
+    tick = _wait_for_tick(symbol)
+    if tick is None or tick.bid <= 0 or tick.ask <= 0:
+        code, desc = mt5.last_error()
+        logger.error(f"/order id={signal_id} recorded but no valid tick for {symbol}: last_error=({code}) {desc}")
+        return jsonify({
+            "ok": False,
+            "error": f"تعذّرت قراءة سعر صالح لـ '{symbol}' — تم تسجيل المعرّف ولن يُقبل مجدداً",
+            "id": signal_id,
+        }), 502
+
+    price = tick.ask if side == "BUY" else tick.bid
+    trade_request = {
+        "action": mt5.TRADE_ACTION_DEAL,
+        "symbol": symbol,
+        "volume": volume,
+        "type": mt5.ORDER_TYPE_BUY if side == "BUY" else mt5.ORDER_TYPE_SELL,
+        "price": price,
+        "sl": body["sl"],
+        "tp": body["tp"],
+        "deviation": ORDER_DEVIATION_POINTS,
+        "magic": MAGIC_NUMBER,
+        "comment": str(body.get("comment", "kawkabat"))[:31],
+        "type_time": mt5.ORDER_TIME_GTC,
+        "type_filling": _pick_filling_mode(info),
+    }
+    result = mt5.order_send(trade_request)
+
+    # Step 8: log the full result — execution errors are loud, never silent.
+    if result is None:
+        code, desc = mt5.last_error()
+        logger.error(f"/order id={signal_id} order_send returned None: last_error=({code}) {desc}, request={trade_request}")
+        return jsonify({
+            "ok": False,
+            "error": f"order_send فشل بلا نتيجة: ({code}) {desc} — تم تسجيل المعرّف ولن يُقبل مجدداً",
+            "id": signal_id,
+        }), 502
+
+    logger.info(
+        f"/order id={signal_id} retcode={result.retcode} comment={result.comment!r} "
+        f"ticket={result.order} price={result.price} request={trade_request}"
+    )
+
+    if result.retcode != mt5.TRADE_RETCODE_DONE:
+        return jsonify({
+            "ok": False,
+            "error": "رفض الوسيط تنفيذ الأمر",
+            "retcode": result.retcode,
+            "mt5_comment": result.comment,
+            "id": signal_id,
+        }), 200
+
+    return jsonify({
+        "ok": True,
+        "ticket": result.order,
+        "price": result.price,
+        "retcode": result.retcode,
+        "id": signal_id,
+    }), 200
+
+
+@app.route("/close", methods=["POST"])
+def close():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or not isinstance(body.get("ticket"), int) or isinstance(body.get("ticket"), bool):
+        return jsonify({"ok": False, "error": "الحقل 'ticket' مطلوب ويجب أن يكون رقماً صحيحاً"}), 400
+    ticket = body["ticket"]
+
+    account, blocked = _account_guard()
+    if blocked is not None:
+        resp_body, status = blocked
+        return jsonify(resp_body), status
+
+    raw = mt5.positions_get(ticket=ticket)
+    if not raw:
+        return jsonify({"ok": False, "error": f"لا توجد صفقة مفتوحة بالتذكرة {ticket}"}), 404
+    position = raw[0]
+
+    tick = _wait_for_tick(position.symbol)
+    if tick is None or tick.bid <= 0 or tick.ask <= 0:
+        code, desc = mt5.last_error()
+        logger.error(f"/close ticket={ticket} no valid tick for {position.symbol}: ({code}) {desc}")
+        return jsonify({"ok": False, "error": f"تعذّرت قراءة سعر صالح لـ '{position.symbol}'"}), 502
+
+    if position.type == mt5.POSITION_TYPE_BUY:
+        order_type = mt5.ORDER_TYPE_SELL
+        price = tick.bid
+    else:
+        order_type = mt5.ORDER_TYPE_BUY
+        price = tick.ask
+
+    info = mt5.symbol_info(position.symbol)
+    filling = _pick_filling_mode(info) if info is not None else mt5.ORDER_FILLING_IOC
+
+    trade_request = {
+        "action": mt5.TRADE_ACTION_DEAL,
+        "symbol": position.symbol,
+        "volume": position.volume,
+        "type": order_type,
+        "position": position.ticket,
+        "price": price,
+        "deviation": ORDER_DEVIATION_POINTS,
+        "magic": MAGIC_NUMBER,
+        "comment": "kawkabat-manual-close",
+        "type_time": mt5.ORDER_TIME_GTC,
+        "type_filling": filling,
+    }
+    result = mt5.order_send(trade_request)
+
+    if result is None:
+        code, desc = mt5.last_error()
+        logger.error(f"/close ticket={ticket} order_send returned None: last_error=({code}) {desc}, request={trade_request}")
+        return jsonify({"ok": False, "error": f"order_send فشل بلا نتيجة: ({code}) {desc}"}), 502
+
+    logger.info(f"/close ticket={ticket} retcode={result.retcode} comment={result.comment!r} request={trade_request}")
+
+    if result.retcode != mt5.TRADE_RETCODE_DONE:
+        return jsonify({
+            "ok": False,
+            "error": "رفض الوسيط إغلاق الصفقة",
+            "retcode": result.retcode,
+            "mt5_comment": result.comment,
+        }), 200
+
+    return jsonify({"ok": True, "ticket": ticket, "retcode": result.retcode}), 200
 
 
 def _port_available(host: str, port: int) -> bool:
