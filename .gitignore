@@ -2,3 +2,9 @@ node_modules
 dist
 .env
 .DS_Store
+
+bridge/logs/
+bridge/signal.json
+bridge/executed.json
+bridge/__pycache__/
+bridge/.venv/
