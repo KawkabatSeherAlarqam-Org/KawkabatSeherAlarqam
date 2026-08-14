@@ -94,18 +94,46 @@ def ensure_connection() -> tuple[bool, str | None]:
     return True, None
 
 
-def load_executed_ids() -> set[str]:
+def load_executed_ids() -> tuple[set[str] | None, str | None]:
+    """Reads executed.json into a set of executed signal ids.
+
+    Returns (ids, None) when the file's state is known for certain (missing file
+    means zero executions so far, or a clean JSON array of strings). Returns
+    (None, error_message) for anything uncertain — missing/corrupted/wrong-shaped
+    content, unreadable file, or a non-string entry — so callers fail safe
+    (treat every signal as already_executed) instead of risking a duplicate
+    order on a Hedge account, which will not reject duplicates itself.
+    """
     if not EXECUTED_PATH.exists():
-        return set()
+        return set(), None
+
     try:
-        data = json.loads(EXECUTED_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as e:
-        logger.error(f"failed to read executed.json: {e}")
-        return set()
-    if isinstance(data, list):
-        return {item for item in data if isinstance(item, str)}
-    logger.error(f"executed.json has unexpected shape (expected a JSON array of id strings): {type(data).__name__}")
-    return set()
+        raw_text = EXECUTED_PATH.read_text(encoding="utf-8")
+    except OSError as e:
+        message = f"executed.json غير قابل للقراءة: {e}"
+        logger.error(message)
+        return None, message
+
+    try:
+        data = json.loads(raw_text)
+    except json.JSONDecodeError as e:
+        message = f"executed.json تالف: {e}"
+        logger.error(message)
+        return None, message
+
+    if not isinstance(data, list):
+        message = f"executed.json ليس مصفوفة JSON كما هو متوقع (النوع الفعلي: {type(data).__name__})"
+        logger.error(message)
+        return None, message
+
+    ids: set[str] = set()
+    for item in data:
+        if not isinstance(item, str):
+            message = f"executed.json يحتوي عنصراً ليس نصاً ({item!r}) — الملف كاملاً غير موثوق"
+            logger.error(message)
+            return None, message
+        ids.add(item)
+    return ids, None
 
 
 def validate_signal(data: dict) -> list[str]:
@@ -229,11 +257,21 @@ def signal():
 
     issues = validate_signal(data)
     signal_id = data.get("id")
-    already_executed = isinstance(signal_id, str) and signal_id in load_executed_ids()
+    executed_ids, executed_error = load_executed_ids()
+
+    if not isinstance(signal_id, str):
+        # No reliable id to check — fail safe rather than assume it's a fresh signal.
+        already_executed = True
+    elif executed_ids is None:
+        already_executed = True
+    else:
+        already_executed = signal_id in executed_ids
 
     response = {"signal": data, "valid": not issues, "already_executed": already_executed}
     if issues:
         response["issues"] = issues
+    if executed_error:
+        response["executed_check_error"] = executed_error
     return jsonify(response), 200
 
 
