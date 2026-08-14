@@ -58,6 +58,59 @@ python mt5_bridge.py
 تعذّر الاتصال بالتيرمينال). الخدمة تستمر بالعمل حتى لو فشل الاتصال الأولي؛
 كل نقطة تحاول الاتصال من جديد عند الحاجة.
 
+## التشغيل التلقائي عند تسجيل الدخول
+
+### التثبيت
+
+```powershell
+cd bridge
+powershell -ExecutionPolicy Bypass -File install-autostart.ps1
+```
+
+ينشئ مهمة مجدولة باسم `KawkabatMT5Bridge` تعمل عند تسجيل دخولك، **بصلاحيتك
+العادية بلا رفع صلاحيات** (`RunLevel Limited`)، وبلا نافذة مرئية (`LogonType
+S4U` — لا يحتاج كلمة مرور مخزَّنة ولا يفتح نافذة على سطح المكتب). تشغيل
+السكربت مرة ثانية آمن تماماً — يتحقق أولاً ولا يُنشئ مهمة مكرَّرة.
+
+**مهم — آلية إعادة التشغيل الفعلية ليست إعدادات Task Scheduler وحدها.** جرَّبت
+`RestartCount`/`RestartInterval` القياسية أولاً، لكن قياساً فعلياً: عند إنهاء
+`python.exe` بـ `Stop-Process -Force`، سجّل Windows النتيجة `LastTaskResult=0`
+("نجاح") — والسياسة المدمجة لا تُعيد التشغيل إلا عند نتيجة غير صفرية، فلم تعمل
+أبداً حتى بعد أكثر من دقيقة انتظار فعلي. لذلك فعل المهمة الفعلي ليس
+`start-mt5-bridge.bat` مباشرة، بل `run-bridge-supervised.ps1` — حلقة تعيد
+تشغيل الجسر خلال 5 ثوانٍ من أي توقف، بصرف النظر عن كود الخروج. إعدادات إعادة
+التشغيل في المهمة نفسها باقية كخط دفاع ثانٍ فقط (لو انهارت الحلقة نفسها، وهو
+احتمال نادر جداً). سجل الحلقة المشرفة نفسها في `bridge/logs/supervisor.log`.
+
+### التحقق
+
+```powershell
+Get-ScheduledTask -TaskName 'KawkabatMT5Bridge' | Select-Object TaskName,State
+Get-ScheduledTaskInfo -TaskName 'KawkabatMT5Bridge' | Select-Object LastRunTime,LastTaskResult
+```
+
+لتشغيلها فوراً بلا انتظار تسجيل دخول جديد: `Start-ScheduledTask -TaskName 'KawkabatMT5Bridge'`.
+
+### الإزالة
+
+```powershell
+cd bridge
+powershell -ExecutionPolicy Bypass -File uninstall-autostart.ps1
+```
+
+يزيل المهمة المجدولة فقط — أي جسر يعمل حالياً (تحت الحلقة المشرفة أو يدوياً)
+يستمر بالعمل بلا تغيير؛ أوقفه يدوياً إن أردت (`Stop-Process` على `python.exe`
+و`powershell.exe` اللذين يشغّلان `run-bridge-supervised.ps1`).
+
+### استكشاف الأخطاء
+
+| العرض | السبب المحتمل |
+|---|---|
+| السكربت يفشل بخطأ Parser غريب (رموز مشوَّهة) عند فتحه بمحرر لا يدعم UTF-8 بشكل صحيح | ملفات `.ps1` هنا تحمل BOM عمداً — على عكس ملفات HTML في هذا المشروع. Windows PowerShell 5.1 يحتاج BOM ليكتشف UTF-8 في سكربتات `.ps1` تحتوي نصاً عربياً؛ بدونه يقرأها بترميز النظام الافتراضي فيتلف النص ويكسر التحليل النحوي. لا تُزل الـBOM من هذين الملفين. |
+| `Register-ScheduledTask` يفشل بخطأ صلاحيات | تأكد أنك تُشغِّل PowerShell كمستخدمك العادي (لا حاجة لـ"Run as Administrator" — والسكربت أصلاً لا يطلب رفع صلاحيات). |
+| المهمة موجودة (`Get-ScheduledTask` يُظهرها) لكن الجسر لا يعمل | تحقّق `bridge/logs/supervisor.log` لمعرفة آخر محاولة تشغيل ونتيجتها، ثم `bridge/logs/bridge-YYYY-MM-DD.log` لتفاصيل فشل الاتصال بـ MT5 نفسه إن وُجدت. |
+| تريد تعطيل التشغيل التلقائي مؤقتاً بلا حذف المهمة | `Disable-ScheduledTask -TaskName 'KawkabatMT5Bridge'`، وأعد التفعيل بـ`Enable-ScheduledTask`. |
+
 ## النقاط
 
 ### `GET /health`

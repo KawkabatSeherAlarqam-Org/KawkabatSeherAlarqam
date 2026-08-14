@@ -690,6 +690,20 @@
       if(res.body.mt5_comment)parts.push('mt5: '+res.body.mt5_comment);
       return parts.length?parts.join(' | '):'HTTP '+res.status;
     }
+
+    function fallbackCopy(text,doc){
+      try{
+        var ta=doc.createElement('textarea');ta.value=text;
+        ta.style.position='fixed';ta.style.opacity='0';
+        doc.body.appendChild(ta);ta.focus();ta.select();doc.execCommand('copy');doc.body.removeChild(ta);
+      }catch(error){}
+    }
+    function copyText(text,doc){
+      try{
+        if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).catch(function(){fallbackCopy(text,doc);});
+        else fallbackCopy(text,doc);
+      }catch(error){fallbackCopy(text,doc);}
+    }
     function logEntry(text,kind){
       mt5Log.unshift({text:text,kind:kind,ts:new Date().toLocaleTimeString()});
       if(mt5Log.length>5)mt5Log.length=5;
@@ -704,16 +718,22 @@
     function paintPanel(){
       if(!mt5PanelDoc||!mt5Panel||!mt5Panel.isConnected)return;
       var d=mt5PanelDoc;
-      var statusLine=d.getElementById('v483StatusLine'),demoBadge=d.getElementById('v483DemoBadge');
+      var statusLine=d.getElementById('v483StatusLine'),demoBadge=d.getElementById('v483DemoBadge'),offline=d.getElementById('v483Offline');
       var armCheckbox=d.getElementById('v483Arm'),buyBtn=d.getElementById('v483Buy'),sellBtn=d.getElementById('v483Sell');
       if(!statusLine)return;
       if(!mt5Connected){
-        statusLine.textContent='غير متصل بالجسر ('+MT5_BRIDGE+')'+((mt5Status&&mt5Status.error)?' — '+mt5Status.error:'');
+        statusLine.textContent='⚠ غير متصل بالجسر ('+MT5_BRIDGE+')'+((mt5Status&&mt5Status.error)?' — '+mt5Status.error:'');
+        statusLine.style.setProperty('color','#9d1010','important');
+        statusLine.style.setProperty('font-weight','700','important');
+        if(offline)offline.style.display='block';
         demoBadge.style.display='none';
         if(buyBtn)buyBtn.disabled=true;if(sellBtn)sellBtn.disabled=true;if(armCheckbox)armCheckbox.disabled=true;
       }else{
         var s=mt5Status;
         statusLine.textContent='حساب '+s.account+' @ '+s.server+' | رصيد '+Number(s.balance).toFixed(2)+' | Equity '+Number(s.equity).toFixed(2);
+        statusLine.style.setProperty('color','#222','important');
+        statusLine.style.setProperty('font-weight','400','important');
+        if(offline)offline.style.display='none';
         var isDemo=!!s.is_demo,blocked=!isDemo;
         demoBadge.style.display='inline-block';
         demoBadge.textContent=isDemo?'DEMO':'REAL';
@@ -783,6 +803,12 @@
         '#v483MT5Close{border:0;background:transparent;font-size:16px;cursor:pointer;color:#9C1919}'+
         '#v483MT5Body{padding:8px 10px;max-height:72vh;overflow:auto}'+
         '#v483StatusLine{font-size:11px;line-height:1.5}'+
+        '#v483Offline{display:none;margin:6px 0;padding:7px 8px;background:#fff0f0;border:1px solid #c62c2c;border-radius:4px}'+
+        '#v483Retry{width:100%;height:28px;border:1px solid #9d1010;border-radius:4px;background:linear-gradient(#fff,#ffd9d9);color:#7a0e0e;font-weight:800;cursor:pointer}'+
+        '#v483CmdRow{display:flex;gap:4px;align-items:center;margin-top:6px}'+
+        '#v483CmdText{flex:1;display:block;overflow-x:auto;white-space:nowrap;background:#fff;border:1px solid #c9a5a5;border-radius:3px;padding:3px 5px;font:11px Consolas,monospace;direction:ltr;text-align:left;color:#333}'+
+        '#v483CopyCmd{height:24px;border:1px solid #8091a5;border-radius:3px;background:#eef2f6;cursor:pointer;font-size:11px;padding:0 6px;white-space:nowrap}'+
+        '#v483AutostartHint{margin-top:6px;font-size:11px;color:#7a0e0e}'+
         '#v483DemoBadge{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:900;margin:5px 0}'+
         '#v483Fields label{display:block;margin:6px 0 2px;font-weight:700}'+
         '#v483Fields input{width:100%;box-sizing:border-box;height:24px;border:1px solid #8091a5;padding:2px 6px;font:12px Tahoma,Arial}'+
@@ -808,6 +834,12 @@
         '<div id="v483MT5Header"><span>MT5</span><button id="v483MT5Close" type="button" aria-label="إغلاق">×</button></div>'+
         '<div id="v483MT5Body">'+
         '<div id="v483StatusLine">—</div>'+
+        '<div id="v483Offline">'+
+        '<button id="v483Retry" type="button">إعادة المحاولة</button>'+
+        '<div id="v483CmdRow"><code id="v483CmdText">C:\\KawkabatSeherAlarqam\\bridge\\start-mt5-bridge.bat</code>'+
+        '<button id="v483CopyCmd" type="button">نسخ الأمر</button></div>'+
+        '<div id="v483AutostartHint">شغّل install-autostart.ps1 مرة واحدة ليعمل تلقائياً</div>'+
+        '</div>'+
         '<div id="v483DemoBadge"></div>'+
         '<div id="v483Fields">'+
         '<label for="v483Symbol">Symbol</label><input id="v483Symbol" type="text" value="XAUUSD">'+
@@ -823,6 +855,20 @@
         '</div>';
       doc.body.appendChild(mt5Panel);
       doc.getElementById('v483MT5Close').addEventListener('click',function(){mt5Panel.removeAttribute('data-open');});
+      doc.getElementById('v483Retry').addEventListener('click',function(){
+        var btn=doc.getElementById('v483Retry');
+        btn.disabled=true;var original=btn.textContent;btn.textContent='...جارٍ المحاولة';
+        mt5Fetch('/health').then(function(res){
+          btn.disabled=false;btn.textContent=original;
+          if(res.ok)refreshStatus();
+          else logEntry('إعادة المحاولة: لا يزال الجسر غير متاح — '+describeFailure(res),'error');
+        });
+      });
+      doc.getElementById('v483CopyCmd').addEventListener('click',function(){
+        var btn=doc.getElementById('v483CopyCmd'),original=btn.textContent;
+        copyText(doc.getElementById('v483CmdText').textContent,doc);
+        btn.textContent='نُسخ ✔';setTimeout(function(){btn.textContent=original;},1500);
+      });
       doc.getElementById('v483Buy').addEventListener('click',function(){placeOrder('BUY');});
       doc.getElementById('v483Sell').addEventListener('click',function(){placeOrder('SELL');});
       doc.getElementById('v483Panic').addEventListener('click',function(){

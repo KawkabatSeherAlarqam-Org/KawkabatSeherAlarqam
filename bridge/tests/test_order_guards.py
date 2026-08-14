@@ -160,6 +160,27 @@ class OrderGuardTests(BridgeTestBase):
         self.assertEqual(sent_request["price"], 4376.63)  # ask, since side=BUY
         self.assertIn(VALID_ORDER_BODY["id"], self.executed_ids())
 
+    def test_integer_sl_tp_coerced_to_float(self) -> None:
+        # A JSON body with whole numbers ("sl": 4365, no decimal point) parses
+        # via json.loads as Python int, not float — mt5.order_send() rejects
+        # an int sl/tp with "(-2) Invalid sl argument". trade_request must
+        # carry real floats regardless of what the client sent. (volume can't
+        # be tested the same way here: MAX_VOLUME_PER_ORDER=0.10 means no
+        # positive int volume is ever valid input in the first place.)
+        self.arm()
+        body = {**VALID_ORDER_BODY, "id": "XAUUSD-int-fields", "sl": 4365, "tp": 4390}
+        self.assertIsInstance(body["sl"], int)
+        self.assertIsInstance(body["tp"], int)
+        resp = self.client.post("/order", json=body)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.get_json()["ok"])
+        sent_request = self.mocks["order_send"].call_args[0][0]
+        self.assertEqual(sent_request["sl"], 4365.0)
+        self.assertIsInstance(sent_request["sl"], float)
+        self.assertEqual(sent_request["tp"], 4390.0)
+        self.assertIsInstance(sent_request["tp"], float)
+        self.assertIsInstance(sent_request["volume"], float)
+
     def test_duplicate_id_blocked_before_order_send(self) -> None:
         self._executed_path.write_text(json.dumps([VALID_ORDER_BODY["id"]]), encoding="utf-8")
         self.arm()

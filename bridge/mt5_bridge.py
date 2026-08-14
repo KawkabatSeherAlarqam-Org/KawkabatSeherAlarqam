@@ -540,11 +540,16 @@ def order():
     trade_request = {
         "action": mt5.TRADE_ACTION_DEAL,
         "symbol": symbol,
-        "volume": volume,
+        # float() here, not int/float trust from the caller — a whole-number
+        # sl/tp/volume in the JSON body (e.g. "sl": 4365) parses as a Python
+        # int, and mt5.order_send() rejects an int with "(-2) Invalid sl
+        # argument" instead of coercing it. Measured live against a real
+        # order on 2026-08-15.
+        "volume": float(volume),
         "type": mt5.ORDER_TYPE_BUY if side == "BUY" else mt5.ORDER_TYPE_SELL,
         "price": price,
-        "sl": body["sl"],
-        "tp": body["tp"],
+        "sl": float(body["sl"]),
+        "tp": float(body["tp"]),
         "deviation": ORDER_DEVIATION_POINTS,
         "magic": MAGIC_NUMBER,
         "comment": str(body.get("comment", "kawkabat"))[:31],
