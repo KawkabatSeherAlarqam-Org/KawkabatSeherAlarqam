@@ -424,12 +424,9 @@
   (function(){
     'use strict';
     var outer=document.getElementById('v418-frame');
-    var BRIDGE=(new URLSearchParams(location.search).get('bridge')||localStorage.getItem('amibrokerBridge')||'http://127.0.0.1:8770').replace(/\/+$/,'');
-    window.__setBridge=function(u){localStorage.setItem('amibrokerBridge',u);location.reload();};
     var ENDPOINTS=[
-
-      BRIDGE+'/quote',
-      BRIDGE+'/live_quote.json'
+      'http://127.0.0.1:8770/quote',
+      'http://127.0.0.1:8770/live_quote.json'
     ];
     var lastPrice=null,lastApplied=null,lastTimestamp=0,applyCount=0,errorCount=0,currentSymbol='WAITING';
     var gridAnchorPrice=null,anchorStartedAt=0,anchorLastRewriteAt=0,gridLocked=false;
@@ -557,7 +554,7 @@
     function requestSymbol(symbol){
       symbol=String(symbol||'').trim().toUpperCase();
       if(!symbol)return;
-      fetch(BRIDGE+'/symbol',{method:'POST',mode:'cors',cache:'no-store',headers:{'Content-Type':'text/plain'},body:symbol})
+      fetch('http://127.0.0.1:8770/symbol',{method:'POST',mode:'cors',cache:'no-store',headers:{'Content-Type':'text/plain'},body:symbol})
         .then(function(response){if(!response.ok)throw new Error('HTTP '+response.status);currentSymbol=symbol;paint(false);})
         .catch(function(){paint(false);});
     }
