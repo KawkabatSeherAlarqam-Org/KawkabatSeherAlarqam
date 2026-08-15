@@ -56,6 +56,18 @@ Source: "{#BridgeRoot}\install-autostart.ps1"; DestDir: "{app}\scripts"; Flags: 
 Source: "{#BridgeRoot}\uninstall-autostart.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#BridgeRoot}\run-bridge-supervised.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
+[Run]
+; Registers the logon-time scheduled task, exactly like the dev workflow
+; (install-autostart.ps1 -ExePath ...) -- runs at the user's own privilege
+; level (Setup itself is PrivilegesRequired=lowest; [Run] entries inherit
+; that, no elevation). [Run] entries execute AFTER ssPostInstall in [Code]
+; below, so failure here is verified independently at ssDone rather than
+; trusted blindly -- see CurStepChanged's ssDone branch.
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\install-autostart.ps1"" -ExePath ""{app}\KawkabatBridge\KawkabatBridge.exe"""; StatusMsg: "تسجيل التشغيل التلقائي..."; Flags: runhidden waituntilterminated
+; The task only fires at the NEXT logon by default -- start it now so
+; /health is reachable immediately, with no manual step after install.
+Filename: "powershell.exe"; Parameters: "-NoProfile -Command ""Start-ScheduledTask -TaskName 'KawkabatMT5Bridge' -ErrorAction SilentlyContinue"""; StatusMsg: "تشغيل الجسر..."; Flags: runhidden waituntilterminated
+
 [UninstallDelete]
 ; run-bridge-supervised.ps1 writes its own supervisor.log relative to its own
 ; location ({app}\scripts\logs\), separate from the app's bridge-YYYY-MM-DD.log
@@ -153,6 +165,26 @@ begin
     ScanAppDataMetaQuotes();
 end;
 
+// Polls (up to 5s) for the scheduled task to exist, point at the exact exe
+// path this install just placed, and be Running -- called from ssDone,
+// AFTER the [Run] entries above have had a chance to register+start it.
+// Never trusts "the [Run] step returned success" alone: a task that exists
+// but never transitions to Running, or a stale leftover pointing elsewhere,
+// would both look fine from [Run]'s point of view alone.
+function VerifyAutostartTask(const ExpectedExePath: String): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := RunHiddenPowerShell(
+    '-Command "' +
+    'for ($i = 0; $i -lt 10; $i++) { ' +
+    '$t = Get-ScheduledTask -TaskName ''KawkabatMT5Bridge'' -ErrorAction SilentlyContinue; ' +
+    'if ($t -and $t.State -eq ''Running'' -and $t.Actions[0].Arguments -like ''*' + ExpectedExePath + '*'') { exit 0 }; ' +
+    'Start-Sleep -Milliseconds 500 ' +
+    '}; exit 1"',
+    ResultCode) and (ResultCode = 0);
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
@@ -171,35 +203,30 @@ begin
 
   if CurStep = ssPostInstall then
   begin
-    ScriptsDir := ExpandConstant('{app}\scripts');
-    ExePath := ExpandConstant('{app}\KawkabatBridge\KawkabatBridge.exe');
-
-    if RunHiddenPowerShell(
-         '-File "' + ScriptsDir + '\install-autostart.ps1" -ExePath "' + ExePath + '"',
-         ResultCode) and (ResultCode = 0) then
-    begin
-      // The scheduled task only fires at the NEXT logon by default -- start
-      // it now so /health is reachable immediately, with no manual step.
-      RunHiddenPowerShell(
-        '-Command "Start-ScheduledTask -TaskName ''KawkabatMT5Bridge'' -ErrorAction SilentlyContinue"',
-        ResultCode);
-    end
-    else
-    begin
-      MsgBox(
-        'تم تثبيت ملفات الجسر بنجاح، لكن تعذّر تسجيل التشغيل التلقائي (كود الخطأ: ' +
-        IntToStr(ResultCode) + ').' + #13#10 + #13#10 +
-        'يمكنك تسجيله يدوياً لاحقاً بتشغيل:' + #13#10 +
-        ScriptsDir + '\install-autostart.ps1',
-        mbError, MB_OK);
-    end;
-
     if not DetectMT5() then
       MsgBox(
         'تم تثبيت الجسر بنجاح، لكن لم يُعثر على تيرمينال MetaTrader 5 مثبَّتاً على هذا الجهاز.' + #13#10 + #13#10 +
         'الجسر سيكتشفه تلقائياً بمجرد تثبيته لاحقاً وإعادة تشغيله. إن كان مثبَّتاً في مسار غير معتاد، ' +
         'اضبط متغيّر البيئة KAWKABAT_MT5_PATH يدوياً إلى المسار الكامل لـ terminal64.exe.',
         mbInformation, MB_OK);
+  end;
+
+  if CurStep = ssDone then
+  begin
+    // Runs AFTER the [Run] section above -- this is the actual verification
+    // of what those entries were supposed to accomplish, not a guess.
+    ScriptsDir := ExpandConstant('{app}\scripts');
+    ExePath := ExpandConstant('{app}\KawkabatBridge\KawkabatBridge.exe');
+
+    if not VerifyAutostartTask(ExePath) then
+      MsgBox(
+        'تم تثبيت ملفات الجسر بنجاح، لكن تعذّر التحقق من أن التشغيل التلقائي يعمل فعلاً ' +
+        '(المهمة المجدولة غير موجودة، أو لا تشير للمسار الصحيح، أو لم تبدأ التشغيل).' + #13#10 + #13#10 +
+        'سجّله يدوياً بتشغيل:' + #13#10 +
+        ScriptsDir + '\install-autostart.ps1 -ExePath "' + ExePath + '"' + #13#10 + #13#10 +
+        'ثم شغِّله فوراً بلا انتظار تسجيل الدخول:' + #13#10 +
+        'Start-ScheduledTask -TaskName ''KawkabatMT5Bridge''',
+        mbError, MB_OK);
   end;
 end;
 
