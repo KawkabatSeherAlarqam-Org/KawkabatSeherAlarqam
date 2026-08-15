@@ -46,15 +46,37 @@ function Write-SupervisorLog([string]$Message) {
     Add-Content -LiteralPath $SupervisorLog -Value $line -Encoding UTF8
 }
 
+# Restart pacing: 2s normally (a real crash/kill should recover fast), but
+# backs off to 10s after 3 consecutive failures so a PERMANENT fault (exe
+# missing, or crashing on every launch) doesn't spin the loop every 2s
+# forever. "Failure" = either the exe wasn't found, or it exited within
+# $FastFailThresholdSeconds of starting (a genuinely-running bridge that gets
+# killed later has been up far longer than that; anything faster reads as a
+# startup crash, not a normal stop). Resets to 0 on any run that clears the
+# threshold, so a single manual kill of an otherwise-healthy bridge never
+# triggers the backoff.
+$BaseSleepSeconds        = 2
+$BackoffSleepSeconds     = 10
+$BackoffThreshold        = 3
+$FastFailThresholdSeconds = 3
+$consecutiveFailures = 0
+
+function Get-RestartDelay {
+    if ($consecutiveFailures -ge $BackoffThreshold) { return $BackoffSleepSeconds }
+    return $BaseSleepSeconds
+}
+
 Write-SupervisorLog "supervisor started (exe: $ExePath)"
 while ($true) {
     if (-not (Test-Path -LiteralPath $ExePath)) {
         # Deliberately does NOT fall back to python/mt5_bridge.py — a silent
         # fallback here would hide exactly the packaging gap this check exists
-        # to catch. Keeps retrying every 5s so it self-heals once the exe is
-        # rebuilt, with no need to restart the scheduled task by hand.
-        Write-SupervisorLog "[FATAL] KawkabatBridge.exe not found at: $ExePath -- build it first: powershell -ExecutionPolicy Bypass -File `"$ScriptDir\build\build.ps1`" (or set KAWKABAT_BRIDGE_EXE / pass -ExePath). Retrying in 5s -- will NOT fall back to python/mt5_bridge.py."
-        Start-Sleep -Seconds 5
+        # to catch. Keeps retrying so it self-heals once the exe is rebuilt,
+        # with no need to restart the scheduled task by hand.
+        $consecutiveFailures++
+        $delay = Get-RestartDelay
+        Write-SupervisorLog "[FATAL] KawkabatBridge.exe not found at: $ExePath -- build it first: powershell -ExecutionPolicy Bypass -File `"$ScriptDir\build\build.ps1`" (or set KAWKABAT_BRIDGE_EXE / pass -ExePath). Retrying in ${delay}s (consecutive failures: $consecutiveFailures) -- will NOT fall back to python/mt5_bridge.py."
+        Start-Sleep -Seconds $delay
         continue
     }
     Write-SupervisorLog 'starting bridge'
@@ -67,8 +89,17 @@ while ($true) {
     # logon context where LOCALAPPDATA-relative writes have behaved differently.
     $StdOutLog = Join-Path $LogDir 'bridge-stdout.log'
     $StdErrLog = Join-Path $LogDir 'bridge-stderr.log'
+    $launchedAt = Get-Date
     $proc = Start-Process -FilePath $ExePath -WorkingDirectory (Split-Path -Parent $ExePath) -PassThru -Wait -WindowStyle Hidden `
         -RedirectStandardOutput $StdOutLog -RedirectStandardError $StdErrLog
-    Write-SupervisorLog "bridge exited (code $($proc.ExitCode)) — restarting in 5s"
-    Start-Sleep -Seconds 5
+    $ranSeconds = ((Get-Date) - $launchedAt).TotalSeconds
+
+    if ($ranSeconds -lt $FastFailThresholdSeconds) {
+        $consecutiveFailures++
+    } else {
+        $consecutiveFailures = 0
+    }
+    $delay = Get-RestartDelay
+    Write-SupervisorLog "bridge exited (code $($proc.ExitCode)) after $([Math]::Round($ranSeconds, 1))s -- restarting in ${delay}s (consecutive failures: $consecutiveFailures)"
+    Start-Sleep -Seconds $delay
 }
