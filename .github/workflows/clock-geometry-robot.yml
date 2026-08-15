@@ -1,0 +1,33 @@
+name: Center Clock Geometry Robot
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/clock-geometry-robot.yml
+      - scripts/diagnose-center-clock-geometry.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install browser robot
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Measure center clock geometry
+        run: node scripts/diagnose-center-clock-geometry.mjs
+      - name: Upload geometry evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: center-clock-geometry
+          path: diagnostics/clock-geometry/result.json
