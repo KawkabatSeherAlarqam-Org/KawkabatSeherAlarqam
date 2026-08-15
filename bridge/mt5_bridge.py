@@ -128,19 +128,35 @@ class DailyFileHandler(logging.Handler):
         self._file_handler: logging.FileHandler | None = None
         self._formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
 
-    def _handler_for_today(self) -> logging.FileHandler:
+    def _handler_for_today(self) -> logging.FileHandler | None:
         today = time.strftime("%Y-%m-%d")
         if today != self._current_date:
             if self._file_handler is not None:
                 self._file_handler.close()
-            LOG_DIR.mkdir(parents=True, exist_ok=True)
-            self._file_handler = logging.FileHandler(LOG_DIR / f"bridge-{today}.log", encoding="utf-8")
-            self._file_handler.setFormatter(self._formatter)
+            self._file_handler = None
+            # Sets _current_date even on failure, deliberately — without this,
+            # a persistent failure (e.g. the file path being unwritable under
+            # a given security context) would retry the mkdir+open on every
+            # single log call for the rest of the day, not just once.
             self._current_date = today
+            target = LOG_DIR / f"bridge-{today}.log"
+            try:
+                LOG_DIR.mkdir(parents=True, exist_ok=True)
+                handler = logging.FileHandler(target, encoding="utf-8")
+                handler.setFormatter(self._formatter)
+                self._file_handler = handler
+                print(f"[LOGGING DEBUG] opened {target} (baseFilename={handler.baseFilename})", file=sys.stdout, flush=True)
+            except Exception as e:
+                # Printed (not logged — this handler is broken) so it still
+                # surfaces via the console handler / stdout redirect even
+                # though file logging itself just failed.
+                print(f"[LOGGING WARNING] could not open {target}: {type(e).__name__}: {e}", file=sys.stdout, flush=True)
         return self._file_handler
 
     def emit(self, record: logging.LogRecord) -> None:
-        self._handler_for_today().emit(record)
+        handler = self._handler_for_today()
+        if handler is not None:
+            handler.emit(record)
 
 
 logger = logging.getLogger("mt5_bridge")
@@ -811,6 +827,13 @@ def diagnostics():
         "executed_path": str(EXECUTED_PATH),
         "allowed_origins": ALLOWED_ORIGINS,
         "private_network_access_header_enabled": True,
+        # "exe" when running as the frozen PyInstaller build (getattr(sys,
+        # "frozen", False) is the documented PyInstaller marker for this),
+        # "script" for a plain `python mt5_bridge.py` run — lets callers
+        # (including run-bridge-supervised.ps1's own smoke checks) confirm
+        # which one is actually serving traffic instead of assuming it.
+        "run_mode": "exe" if getattr(sys, "frozen", False) else "script",
+        "executable": sys.executable,
     }), 200
 
 

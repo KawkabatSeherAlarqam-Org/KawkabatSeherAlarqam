@@ -6,9 +6,20 @@ file), not by editing this file's Analysis()/EXE() calls to add CLI flags —
 this *is* the CLI-flag equivalent, checked into Git on purpose so the build
 is reproducible without remembering a flag list.
 
-One-file, windowed (no console) by default — see the runtime --console
-switch (bridge/mt5_bridge.py: _configure_runtime_io) for live-log viewing
-without rebuilding.
+--onedir, not --onefile. Output is bridge/build/dist/KawkabatBridge/
+(KawkabatBridge.exe + an _internal/ folder) — copy/ship the whole folder,
+not just the .exe. Switched from an earlier --onefile build after measuring
+it live: onefile re-extracts its ~21MB payload to a fresh %TEMP% folder on
+EVERY launch, and Windows Defender's real-time scan of that fresh extraction
+was the dominant cost in a kill-and-restart cycle (~15-27s measured, mostly
+that scan, not app code) — unacceptable restart latency for a service
+guarding live trading orders behind ARM. onedir starts the interpreter
+directly from static, already-on-disk files: no per-launch extraction, no
+fresh-file AV scan every time.
+
+Windowed (no visible console) by default — see the runtime --console switch
+(bridge/mt5_bridge.py: _configure_runtime_io) for live-log viewing without
+rebuilding.
 """
 from pathlib import Path
 
@@ -52,20 +63,27 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
+    exclude_binaries=True,
     name="KawkabatBridge",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    upx_exclude=[],
-    runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    name="KawkabatBridge",
 )

@@ -151,6 +151,8 @@ class DiagnosticsEndpointTests(unittest.TestCase):
         self.assertIn("allowed_origins", body)
         self.assertTrue(body["private_network_access_header_enabled"])
         self.assertIsInstance(body["discovery_attempts"], list)
+        # Tests run via `python -m unittest`, never the frozen exe.
+        self.assertEqual(body["run_mode"], "script")
 
 
 if __name__ == "__main__":
