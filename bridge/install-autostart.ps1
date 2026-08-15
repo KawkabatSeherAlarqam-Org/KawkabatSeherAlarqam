@@ -63,12 +63,45 @@ if (-not (Test-Path -LiteralPath $InternalDir)) {
     exit 1
 }
 
+$wasReplaced = $false
 $existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 if ($existing) {
-    Write-Host "[INFO] المهمة '$TaskName' موجودة بالفعل — لن أنشئها من جديد."
-    Write-Host "       للتحقق: Get-ScheduledTask -TaskName '$TaskName'"
-    Write-Host "       لإعادة التثبيت من الصفر: شغّل uninstall-autostart.ps1 أولاً."
-    exit 0
+    # Compare the CURRENTLY REGISTERED -ExePath against what we'd register
+    # now, instead of just "task exists, skip" -- a reinstall/upgrade with a
+    # different exe location (dev path vs. installed path, or an old install
+    # dir) used to leave the OLD path registered silently, so the task kept
+    # launching stale code while the user believed the new install was live.
+    $currentArgs = $existing.Actions[0].Arguments
+    $currentExePath = $null
+    if ($currentArgs -match '-ExePath\s+"([^"]*)"') {
+        try { $currentExePath = [System.IO.Path]::GetFullPath($Matches[1]) } catch { $currentExePath = $Matches[1] }
+    }
+
+    if ($currentExePath -and ($currentExePath -eq $ExePath)) {
+        Write-Host "[INFO] المهمة '$TaskName' موجودة بالفعل وتشير لنفس المسار الصحيح — لا حاجة لإعادة التسجيل."
+        Write-Host "       exe: $ExePath"
+        exit 0
+    }
+
+    Write-Host "[INFO] المهمة '$TaskName' موجودة لكنها تشير لمسار مختلف عمّا طُلب الآن:"
+    Write-Host "       المسجَّل حالياً: $(if ($currentExePath) { $currentExePath } else { '(تعذّر استخراج مسار من تسجيلها الحالي)' })"
+    Write-Host "       المطلوب الآن:  $ExePath"
+    Write-Host "       سأوقفها وأُلغي تسجيلها وأُعيد إنشاءها بالمسار الصحيح..."
+
+    Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    # Belt-and-suspenders: Stop-ScheduledTask relies on Task Scheduler's own
+    # job-object cleanup to also kill the child KawkabatBridge.exe it
+    # launched -- catch anything that survives that (e.g. a bridge started
+    # some other way, not via this task).
+    Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -like '*run-bridge-supervised.ps1*' } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    Get-Process -Name KawkabatBridge -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 500
+
+    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+    Write-Host "[OK] أُلغي التسجيل القديم — سأتابع لإنشاء تسجيل جديد بالمسار الصحيح."
+    $wasReplaced = $true
 }
 
 $psArgs = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$SupervisorPath`" -ExePath `"$ExePath`""
@@ -94,7 +127,11 @@ Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
     -Description "يشغّل جسر MT5 المحلي (KawkabatBridge.exe عند $ExePath) تلقائياً عند تسجيل الدخول عبر run-bridge-supervised.ps1، بصلاحية المستخدم العادية بلا رفع صلاحيات. الحلقة المشرفة تعيد تشغيل الجسر خلال ثوانٍ من أي توقف، بصرف النظر عن كود الخروج." `
     | Out-Null
 
-Write-Host "[OK] أُنشئت المهمة '$TaskName'."
+if ($wasReplaced) {
+    Write-Host "[OK] أُعيد تسجيل المهمة '$TaskName' بالمسار الصحيح (كانت تشير لمسار مختلف)."
+} else {
+    Write-Host "[OK] أُنشئت المهمة '$TaskName'."
+}
 Write-Host "     exe: $ExePath"
 Write-Host "     تحقّق: Get-ScheduledTask -TaskName '$TaskName' | Select-Object TaskName,State"
 Write-Host "     تحقّق أن المهمة تشير للـexe: (Get-ScheduledTask -TaskName '$TaskName').Actions"
