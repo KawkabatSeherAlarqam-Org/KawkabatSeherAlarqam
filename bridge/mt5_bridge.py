@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import socket
 import sys
 import threading
@@ -19,19 +20,90 @@ import MetaTrader5 as mt5
 from flask import Flask, g, jsonify, request
 from flask_cors import CORS
 
+
+def _configure_runtime_io() -> None:
+    """Fixes up sys.stdout/stderr for a frozen --windowed PyInstaller build.
+
+    A --windowed exe has sys.stdout/stderr = None (documented PyInstaller
+    behavior) — any bare print() or the console log handler below would
+    crash with AttributeError on a None stream, silently (no console to show
+    the traceback in). --console re-attaches a real console via AllocConsole
+    so `KawkabatBridge.exe --console` can show the log live; otherwise the
+    streams are redirected to os.devnull so nothing crashes.
+
+    No-ops entirely for normal `python mt5_bridge.py` runs (dev, tests) where
+    sys.stdout/stderr are already real streams.
+    """
+    if sys.stdout is not None and sys.stderr is not None:
+        return
+
+    if "--console" in sys.argv:
+        try:
+            import ctypes
+            ctypes.windll.kernel32.AllocConsole()
+            sys.stdout = open("CONOUT$", "w", encoding="utf-8", buffering=1)
+            sys.stderr = open("CONOUT$", "w", encoding="utf-8", buffering=1)
+            sys.stdin = open("CONIN$", "r", encoding="utf-8")
+            return
+        except Exception:
+            pass  # fall through to devnull rather than crash on a broken console attach
+
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
+
+_configure_runtime_io()
+
+# Must run before any print() of Arabic text below (e.g. the fatal
+# KAWKABAT_ALLOWED_ORIGINS check right after this) — measured live: on a
+# console using a non-UTF-8 codepage, printing Arabic text before this
+# reconfigure crashes with UnicodeEncodeError instead of showing the message.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 HOST = "127.0.0.1"
 PORT = 8771
-ALLOWED_ORIGINS = ["http://127.0.0.1:8080", "http://localhost:8080"]
 
-MT5_TERMINAL_PATH = r"C:\Program Files\MetaTrader 5\terminal64.exe"
+
+def _parse_allowed_origins() -> list[str]:
+    """KAWKABAT_ALLOWED_ORIGINS is a comma-separated allowlist — the bridge
+    executes real financial orders, so '*' is refused outright rather than
+    silently narrowed or ignored: the service will not start at all.
+    """
+    raw = os.environ.get("KAWKABAT_ALLOWED_ORIGINS", "http://127.0.0.1:8080,http://localhost:8080")
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
+    if "*" in origins:
+        print("[FATAL] KAWKABAT_ALLOWED_ORIGINS يحتوي '*' — ممنوع لخدمة تنفّذ أوامر مالية. حدد أصولاً صريحة مفصولة بفواصل.")
+        sys.exit(1)
+    if not origins:
+        print("[FATAL] KAWKABAT_ALLOWED_ORIGINS انتهى إلى قائمة أصول فارغة.")
+        sys.exit(1)
+    return origins
+
+
+ALLOWED_ORIGINS = _parse_allowed_origins()
+
 MT5_STARTUP_TIMEOUT_MS = 60_000
 MT5_RECONNECT_TIMEOUT_MS = 3_000
 
-BRIDGE_VERSION = "2.0.0"
-BRIDGE_DIR = Path(__file__).resolve().parent
-LOG_DIR = BRIDGE_DIR / "logs"
-SIGNAL_PATH = BRIDGE_DIR / "signal.json"
-EXECUTED_PATH = BRIDGE_DIR / "executed.json"
+BRIDGE_VERSION = "2.1.0"
+
+_data_dir_override = os.environ.get("KAWKABAT_DATA_DIR")
+if _data_dir_override:
+    DATA_DIR = Path(_data_dir_override)
+    DATA_DIR_SOURCE = "env (KAWKABAT_DATA_DIR)"
+else:
+    _local_appdata = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+    DATA_DIR = Path(_local_appdata) / "Kawkabat"
+    DATA_DIR_SOURCE = "default (%LOCALAPPDATA%\\Kawkabat)"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+LOG_DIR = DATA_DIR / "logs"
+SIGNAL_PATH = DATA_DIR / "signal.json"
+EXECUTED_PATH = DATA_DIR / "executed.json"
 
 TRADE_MODE_DEMO = 0
 MARGIN_MODE_LABELS = {0: "NETTING", 1: "EXCHANGE", 2: "HEDGE"}
@@ -71,10 +143,6 @@ class DailyFileHandler(logging.Handler):
         self._handler_for_today().emit(record)
 
 
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")
-    sys.stderr.reconfigure(encoding="utf-8")
-
 logger = logging.getLogger("mt5_bridge")
 logger.setLevel(logging.INFO)
 logger.addHandler(DailyFileHandler())
@@ -82,8 +150,325 @@ _console_handler = logging.StreamHandler(sys.stdout)
 _console_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
 logger.addHandler(_console_handler)
 
+
+def _hive_name(hive) -> str:
+    import winreg
+    return {winreg.HKEY_CURRENT_USER: "HKCU", winreg.HKEY_LOCAL_MACHINE: "HKLM"}.get(hive, str(hive))
+
+
+def _find_via_registry(attempts: list[dict]) -> str | None:
+    """Best-effort: MetaQuotes installers are not guaranteed to write these
+    keys (observed empty on at least one real Program-Files install during
+    development — see bridge/README.md) so this is one source among several,
+    never the only one relied on.
+    """
+    try:
+        import winreg
+    except ImportError:
+        attempts.append({"source": "registry", "path": None, "found": False, "detail": "وحدة winreg غير متاحة (النظام ليس Windows)"})
+        return None
+
+    roots = [
+        (winreg.HKEY_CURRENT_USER, r"Software\MetaQuotes\Terminal"),
+        (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\MetaQuotes\Terminal"),
+        (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\MetaQuotes\Terminal"),
+    ]
+    value_names = ("Path", "PathTerminal", "path", "InstallDir", "")
+
+    for hive, subkey in roots:
+        key_label = f"{_hive_name(hive)}\\{subkey}"
+        try:
+            key = winreg.OpenKey(hive, subkey)
+        except OSError:
+            attempts.append({"source": "registry", "path": key_label, "found": False, "detail": "المفتاح غير موجود"})
+            continue
+        try:
+            i = 0
+            checked_any_value = False
+            while True:
+                try:
+                    child_name = winreg.EnumKey(key, i)
+                except OSError:
+                    break
+                i += 1
+                try:
+                    child = winreg.OpenKey(key, child_name)
+                except OSError:
+                    continue
+                try:
+                    for value_name in value_names:
+                        try:
+                            value, _kind = winreg.QueryValueEx(child, value_name)
+                        except OSError:
+                            continue
+                        checked_any_value = True
+                        candidate = Path(str(value)) / "terminal64.exe"
+                        if candidate.is_file():
+                            attempts.append({
+                                "source": "registry", "path": str(candidate), "found": True,
+                                "detail": f"مُشتق من {key_label}\\{child_name}",
+                            })
+                            return str(candidate)
+                finally:
+                    winreg.CloseKey(child)
+            attempts.append({
+                "source": "registry", "path": key_label, "found": False,
+                "detail": "لا مسار صالح ضمن فروعه الفرعية" if checked_any_value else "المفتاح موجود لكن بلا فروع فرعية قابلة للقراءة",
+            })
+        finally:
+            winreg.CloseKey(key)
+    return None
+
+
+def _scan_dir_for_terminal(root: Path, attempts: list[dict], max_entries: int = 500) -> str | None:
+    """Checks root/terminal64.exe directly, then one level into subfolders
+    whose name suggests a MetaTrader/MT5 install (broker-branded folders like
+    'IC Markets MT5', 'XM MT5', ...).
+    """
+    if not root.exists():
+        attempts.append({"source": "common_path", "path": str(root), "found": False, "detail": "المجلد غير موجود"})
+        return None
+
+    direct = root / "terminal64.exe"
+    if direct.is_file():
+        attempts.append({"source": "common_path", "path": str(direct), "found": True, "detail": "موجود مباشرة"})
+        return str(direct)
+
+    try:
+        entries = list(os.scandir(root))
+    except OSError as e:
+        attempts.append({"source": "common_path", "path": str(root), "found": False, "detail": f"تعذّرت قراءة المجلد: {e}"})
+        return None
+
+    checked = 0
+    for entry in entries:
+        if checked >= max_entries:
+            break
+        if not entry.is_dir():
+            continue
+        name_lower = entry.name.lower()
+        if "metatrader" not in name_lower and "mt5" not in name_lower:
+            continue
+        checked += 1
+        candidate = Path(entry.path) / "terminal64.exe"
+        if candidate.is_file():
+            attempts.append({"source": "common_path", "path": str(candidate), "found": True, "detail": "موجود"})
+            return str(candidate)
+        attempts.append({"source": "common_path", "path": str(candidate), "found": False, "detail": "غير موجود"})
+    return None
+
+
+def _scan_metaquotes_appdata(attempts: list[dict]) -> str | None:
+    """%APPDATA%\\MetaQuotes\\Terminal\\<hash>\\terminal64.exe — the layout
+    used by non-admin/portable-style MT5 installs, as opposed to Program Files.
+    """
+    appdata = os.environ.get("APPDATA")
+    if not appdata:
+        attempts.append({"source": "common_path", "path": None, "found": False, "detail": "متغير البيئة APPDATA غير معرَّف"})
+        return None
+    root = Path(appdata) / "MetaQuotes" / "Terminal"
+    if not root.exists():
+        attempts.append({"source": "common_path", "path": str(root), "found": False, "detail": "المجلد غير موجود"})
+        return None
+    try:
+        subdirs = [e for e in os.scandir(root) if e.is_dir()]
+    except OSError as e:
+        attempts.append({"source": "common_path", "path": str(root), "found": False, "detail": f"تعذّرت قراءة المجلد: {e}"})
+        return None
+    for entry in subdirs:
+        candidate = Path(entry.path) / "terminal64.exe"
+        if candidate.is_file():
+            attempts.append({"source": "common_path", "path": str(candidate), "found": True, "detail": "موجود"})
+            return str(candidate)
+    attempts.append({
+        "source": "common_path", "path": str(root), "found": False,
+        "detail": f"لا terminal64.exe داخل أي من {len(subdirs)} مجلداً فرعياً",
+    })
+    return None
+
+
+def _find_via_process() -> str | None:
+    """Best-effort: if terminal64.exe is already running, reads its exe path
+    via the Win32 API directly (CreateToolhelp32Snapshot + QueryFullProcessImageNameW)
+    rather than adding a psutil dependency just for this.
+    """
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        TH32CS_SNAPPROCESS = 0x00000002
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
+        class PROCESSENTRY32(ctypes.Structure):
+            _fields_ = [
+                ("dwSize", wintypes.DWORD),
+                ("cntUsage", wintypes.DWORD),
+                ("th32ProcessID", wintypes.DWORD),
+                ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
+                ("th32ModuleID", wintypes.DWORD),
+                ("cntThreads", wintypes.DWORD),
+                ("th32ParentProcessID", wintypes.DWORD),
+                ("pcPriClassBase", ctypes.c_long),
+                ("dwFlags", wintypes.DWORD),
+                ("szExeFile", ctypes.c_char * 260),
+            ]
+
+        kernel32 = ctypes.windll.kernel32
+        snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+        if snapshot in (-1, 0):
+            return None
+        try:
+            entry = PROCESSENTRY32()
+            entry.dwSize = ctypes.sizeof(PROCESSENTRY32)
+            pid = None
+            has_entry = kernel32.Process32First(snapshot, ctypes.byref(entry))
+            while has_entry:
+                name = entry.szExeFile.decode("mbcs", errors="ignore")
+                if name.lower() == "terminal64.exe":
+                    pid = entry.th32ProcessID
+                    break
+                has_entry = kernel32.Process32Next(snapshot, ctypes.byref(entry))
+        finally:
+            kernel32.CloseHandle(snapshot)
+
+        if pid is None:
+            return None
+
+        hproc = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not hproc:
+            return None
+        try:
+            buf = ctypes.create_unicode_buffer(32768)
+            size = wintypes.DWORD(len(buf))
+            if not kernel32.QueryFullProcessImageNameW(hproc, 0, buf, ctypes.byref(size)):
+                return None
+            return buf.value or None
+        finally:
+            kernel32.CloseHandle(hproc)
+    except Exception as e:
+        logger.warning(f"process-based MT5 discovery failed: {e}")
+        return None
+
+
+def find_terminal_path() -> dict:
+    """Locates terminal64.exe, trying each source in order and stopping at
+    the first that exists on disk:
+
+      1. KAWKABAT_MT5_PATH env var (explicit manual override)
+      2. Windows registry (HKCU/HKLM, MetaQuotes\\Terminal subtree)
+      3. Common install paths (Program Files, Program Files (x86),
+         %APPDATA%\\MetaQuotes\\Terminal — including broker-branded folders)
+      4. An already-running terminal64.exe process
+      5. Nothing found — caller falls back to mt5.initialize() with no path
+
+    Every attempt (successful or not) is recorded so a downstream connection
+    failure can list exactly what was tried instead of a bare IPC timeout.
+    """
+    attempts: list[dict] = []
+
+    env_path = os.environ.get("KAWKABAT_MT5_PATH")
+    if env_path:
+        p = Path(env_path)
+        if p.is_file():
+            attempts.append({"source": "env", "path": str(p), "found": True, "detail": "موجود (KAWKABAT_MT5_PATH)"})
+            return {"path": str(p), "source": "env", "attempts": attempts}
+        attempts.append({
+            "source": "env", "path": str(p), "found": False,
+            "detail": "KAWKABAT_MT5_PATH مضبوط لكن لا يوجد ملف في هذا المسار",
+        })
+
+    registry_path = _find_via_registry(attempts)
+    if registry_path:
+        return {"path": registry_path, "source": "registry", "attempts": attempts}
+
+    for root in (os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)")):
+        if not root:
+            continue
+        found = _scan_dir_for_terminal(Path(root), attempts)
+        if found:
+            return {"path": found, "source": "common_path", "attempts": attempts}
+
+    appdata_found = _scan_metaquotes_appdata(attempts)
+    if appdata_found:
+        return {"path": appdata_found, "source": "common_path", "attempts": attempts}
+
+    process_path = _find_via_process()
+    if process_path:
+        attempts.append({
+            "source": "process", "path": process_path, "found": True,
+            "detail": "مأخوذ من عملية terminal64.exe قائمة حالياً",
+        })
+        return {"path": process_path, "source": "process", "attempts": attempts}
+    attempts.append({"source": "process", "path": None, "found": False, "detail": "لا توجد عملية terminal64.exe قائمة حالياً"})
+
+    attempts.append({
+        "source": "default", "path": None, "found": False,
+        "detail": "لم يُعثر على مسار محدَّد — سيُستخدَم mt5.initialize() بلا مسار كملاذ أخير",
+    })
+    return {"path": None, "source": "default", "attempts": attempts}
+
+
+_DISCOVERY: dict | None = None
+
+
+def get_terminal_path() -> dict:
+    global _DISCOVERY
+    if _DISCOVERY is None:
+        _DISCOVERY = find_terminal_path()
+        logger.info(
+            f"MT5 terminal discovery: path={_DISCOVERY['path']!r} source={_DISCOVERY['source']} "
+            f"attempts={len(_DISCOVERY['attempts'])}"
+        )
+    return _DISCOVERY
+
+
+def _mt5_initialize(path: str | None, timeout_ms: int) -> bool:
+    """mt5.initialize(path=None, ...) fails outright with '(-2) Invalid path
+    argument' — it is NOT equivalent to omitting the kwarg (measured live).
+    Omitting it entirely is what triggers the terminal's own default search.
+    """
+    if path:
+        return mt5.initialize(path=path, timeout=timeout_ms)
+    return mt5.initialize(timeout=timeout_ms)
+
+
+def _describe_init_failure(code: int, desc: str) -> str:
+    discovery = get_terminal_path()
+    lines = [f"تعذّر الاتصال بتيرمينال MT5: ({code}) {desc}."]
+    if discovery["path"]:
+        lines.append(f"المسار المستخدَم: {discovery['path']} (مصدر الاكتشاف: {discovery['source']}).")
+        lines.append("تحقّق أن التيرمينال في هذا المسار فعلاً، وأنه ليس مغلقاً منذ فترة طويلة، وأن حساباً مسجَّل دخوله فيه.")
+    else:
+        lines.append("لم يُعثر على terminal64.exe تلقائياً في أي مما يلي:")
+        for a in discovery["attempts"]:
+            lines.append(f"  - [{a['source']}] {a['path'] or '(بلا مسار محدَّد)'}: {a['detail']}")
+        lines.append(
+            "اضبط متغير البيئة KAWKABAT_MT5_PATH يدوياً إلى المسار الكامل لـ terminal64.exe "
+            "(مثال: C:\\Program Files\\IC Markets MT5\\terminal64.exe) ثم أعد تشغيل الجسر."
+        )
+    return "\n".join(lines)
+
+
 app = Flask(__name__)
-CORS(app, origins=ALLOWED_ORIGINS)
+# allow_private_network=True answers Chrome's Private Network Access preflight
+# (Access-Control-Request-Private-Network: true) with Access-Control-Allow-
+# Private-Network: true — an HTTPS page calling 127.0.0.1 is blocked silently
+# without it. Does not show up in same-origin local testing, only once the
+# wheel is served from a remote HTTPS host. flask-cors only sends it for an
+# already-allowed origin (measured: a rejected origin gets no CORS headers at
+# all, PNA included), so this never widens ALLOWED_ORIGINS itself.
+CORS(app, origins=ALLOWED_ORIGINS, allow_private_network=True)
+
+
+@app.after_request
+def _log_rejected_cors_origin(response):
+    """flask-cors silently omits CORS headers for a disallowed origin; this
+    only adds the log line so a misconfigured remote host is visible.
+    """
+    origin = request.headers.get("Origin")
+    if origin and origin not in ALLOWED_ORIGINS:
+        logger.warning(f"CORS: rejected origin {origin!r} for {request.method} {request.path}")
+    return response
 
 
 class ArmState:
@@ -111,15 +496,16 @@ ARM_STATE = ArmState()
 
 
 def ensure_connection() -> tuple[bool, str | None]:
-    """Confirms the terminal IPC link is up, reconnecting (with an explicit path) if it dropped."""
+    """Confirms the terminal IPC link is up, reconnecting (with the discovered path) if it dropped."""
     if mt5.terminal_info() is not None:
         return True, None
 
     logger.info("terminal_info() is None; attempting reconnect via mt5.initialize()")
-    ok = mt5.initialize(path=MT5_TERMINAL_PATH, timeout=MT5_RECONNECT_TIMEOUT_MS)
+    discovery = get_terminal_path()
+    ok = _mt5_initialize(discovery["path"], MT5_RECONNECT_TIMEOUT_MS)
     if not ok:
         code, desc = mt5.last_error()
-        message = f"تعذّر الاتصال بتيرمينال MT5: ({code}) {desc}"
+        message = _describe_init_failure(code, desc)
         logger.error(f"reconnect failed: ({code}) {desc}")
         return False, message
 
@@ -400,6 +786,34 @@ def symbols():
     }), 200
 
 
+@app.route("/diagnostics", methods=["GET"])
+def diagnostics():
+    discovery = get_terminal_path()
+    ok, err = ensure_connection()
+    terminal = mt5.terminal_info() if ok else None
+    account = mt5.account_info() if ok else None
+    version_info = mt5.version() if ok else None
+
+    return jsonify({
+        "resolved_terminal_path": discovery["path"],
+        "resolved_source": discovery["source"],
+        "discovery_attempts": discovery["attempts"],
+        "connected": ok,
+        "connect_error": err,
+        "terminal_connected": bool(terminal.connected) if terminal is not None else None,
+        "account_logged_in": account is not None,
+        "terminal_version": list(version_info) if version_info is not None else None,
+        "bridge_version": BRIDGE_VERSION,
+        "data_dir": str(DATA_DIR),
+        "data_dir_source": DATA_DIR_SOURCE,
+        "log_dir": str(LOG_DIR),
+        "signal_path": str(SIGNAL_PATH),
+        "executed_path": str(EXECUTED_PATH),
+        "allowed_origins": ALLOWED_ORIGINS,
+        "private_network_access_header_enabled": True,
+    }), 200
+
+
 @app.route("/arm", methods=["GET"])
 def arm_get():
     armed, since = ARM_STATE.get()
@@ -671,12 +1085,19 @@ def main() -> None:
         print(f"[FATAL] المنفذ {PORT} مشغول بالفعل على {HOST}. أوقف العملية التي تستخدمه أو أغلقها ثم أعد المحاولة.")
         sys.exit(1)
 
-    logger.info(f"starting MT5 bridge on {HOST}:{PORT}, connecting to terminal at {MT5_TERMINAL_PATH}")
-    ok = mt5.initialize(path=MT5_TERMINAL_PATH, timeout=MT5_STARTUP_TIMEOUT_MS)
+    discovery = get_terminal_path()
+    logger.info(f"data dir: {DATA_DIR} (source: {DATA_DIR_SOURCE})")
+    logger.info(f"signal path: {SIGNAL_PATH}")
+    logger.info(f"executed path: {EXECUTED_PATH}")
+    logger.info(f"starting MT5 bridge on {HOST}:{PORT}, terminal path={discovery['path']!r} (source={discovery['source']})")
+    print(f"[INFO] مجلد البيانات: {DATA_DIR} (المصدر: {DATA_DIR_SOURCE})")
+    print(f"[INFO] مسار التيرمينال المكتشف: {discovery['path'] or '(بلا مسار — سيُستخدَم بحث MT5 الافتراضي)'} (المصدر: {discovery['source']})")
+
+    ok = _mt5_initialize(discovery["path"], MT5_STARTUP_TIMEOUT_MS)
     if not ok:
         code, desc = mt5.last_error()
         logger.error(f"initial mt5.initialize() failed: ({code}) {desc}")
-        print(f"[WARN] تعذّر الاتصال بتيرمينال MT5 عند الإقلاع: ({code}) {desc}")
+        print(f"[WARN] {_describe_init_failure(code, desc)}")
         print("[WARN] ستستمر الخدمة بالعمل وستحاول إعادة الاتصال مع كل طلب.")
     else:
         account = mt5.account_info()

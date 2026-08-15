@@ -8,6 +8,8 @@ bridge/signal.json
 bridge/executed.json
 bridge/__pycache__/
 bridge/.venv/
+bridge/build/dist/
+bridge/build/build/
 
 __pycache__/
 *.pyc
