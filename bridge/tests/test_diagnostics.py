@@ -3,6 +3,7 @@ override, KAWKABAT_ALLOWED_ORIGINS validation, and GET /diagnostics.
 
 Run: python -m unittest discover -s bridge/tests -t bridge
 """
+import json
 import os
 import sys
 import tempfile
@@ -153,6 +154,93 @@ class DiagnosticsEndpointTests(unittest.TestCase):
         self.assertIsInstance(body["discovery_attempts"], list)
         # Tests run via `python -m unittest`, never the frozen exe.
         self.assertEqual(body["run_mode"], "script")
+        self.assertEqual(body["instance_path"], mt5_bridge._instance_identity_path())
+
+
+def _fake_http_response(payload_dict):
+    """Minimal stand-in for what urllib.request.urlopen(...) as a context
+    manager returns -- just enough for _describe_port_conflict's .read().
+    """
+    body = json.dumps(payload_dict).encode("utf-8")
+    cm = mock.MagicMock()
+    cm.__enter__.return_value.read.return_value = body
+    return cm
+
+
+class InstanceIdentityPathTests(unittest.TestCase):
+    def test_script_mode_returns_resolved_script_path(self) -> None:
+        # sys.executable (python.exe) would be identical across every dev
+        # checkout -- useless for telling two copies apart, which is the
+        # whole point of this function existing separately from it.
+        with mock.patch.object(mt5_bridge.sys, "frozen", False, create=True):
+            path = mt5_bridge._instance_identity_path()
+        self.assertEqual(path, str(Path(mt5_bridge.__file__).resolve()))
+
+    def test_frozen_mode_returns_sys_executable(self) -> None:
+        with mock.patch.object(mt5_bridge.sys, "frozen", True, create=True), \
+             mock.patch.object(mt5_bridge.sys, "executable", "C:\\Fake\\KawkabatBridge.exe"):
+            path = mt5_bridge._instance_identity_path()
+        self.assertEqual(path, "C:\\Fake\\KawkabatBridge.exe")
+
+
+class DescribePortConflictTests(unittest.TestCase):
+    def test_names_both_paths_when_different(self) -> None:
+        my_path = "C:\\Dev\\bridge\\mt5_bridge.py"
+        other_path = "C:\\Users\\me\\AppData\\Local\\Kawkabat\\KawkabatBridge\\KawkabatBridge.exe"
+        with mock.patch.object(mt5_bridge, "_instance_identity_path", return_value=my_path), \
+             mock.patch.object(mt5_bridge.urllib.request, "urlopen",
+                                return_value=_fake_http_response({"instance_path": other_path})):
+            message = mt5_bridge._describe_port_conflict(8771)
+        self.assertIn(my_path, message)
+        self.assertIn(other_path, message)
+
+    def test_falls_back_to_executable_field_for_older_bridge(self) -> None:
+        my_path = "C:\\Dev\\bridge\\mt5_bridge.py"
+        other_exe = "C:\\Old\\KawkabatBridge.exe"
+        with mock.patch.object(mt5_bridge, "_instance_identity_path", return_value=my_path), \
+             mock.patch.object(mt5_bridge.urllib.request, "urlopen",
+                                return_value=_fake_http_response({"executable": other_exe})):
+            message = mt5_bridge._describe_port_conflict(8771)
+        self.assertIn(other_exe, message)
+
+    def test_same_path_message_when_identical(self) -> None:
+        my_path = "C:\\Dev\\bridge\\mt5_bridge.py"
+        with mock.patch.object(mt5_bridge, "_instance_identity_path", return_value=my_path), \
+             mock.patch.object(mt5_bridge.urllib.request, "urlopen",
+                                return_value=_fake_http_response({"instance_path": my_path})):
+            message = mt5_bridge._describe_port_conflict(8771)
+        self.assertIn(my_path, message)
+        self.assertIn("نفس المسار", message)
+
+    def test_diagnostics_unreachable_falls_back_to_generic_message(self) -> None:
+        with mock.patch.object(mt5_bridge.urllib.request, "urlopen",
+                                side_effect=mt5_bridge.urllib.error.URLError("refused")):
+            message = mt5_bridge._describe_port_conflict(8771)
+        self.assertIn("8771", message)
+        self.assertIn("تعذّر الاستعلام", message)
+
+    def test_response_missing_path_fields_falls_back_to_generic_message(self) -> None:
+        with mock.patch.object(mt5_bridge.urllib.request, "urlopen",
+                                return_value=_fake_http_response({"connected": True})):
+            message = mt5_bridge._describe_port_conflict(8771)
+        self.assertIn("8771", message)
+
+    def test_never_raises_on_malformed_json(self) -> None:
+        cm = mock.MagicMock()
+        cm.__enter__.return_value.read.return_value = b"not json"
+        with mock.patch.object(mt5_bridge.urllib.request, "urlopen", return_value=cm):
+            message = mt5_bridge._describe_port_conflict(8771)
+        self.assertIn("8771", message)
+
+
+class MainPortConflictExitTests(unittest.TestCase):
+    def test_main_exits_with_dedicated_code_on_port_conflict(self) -> None:
+        with mock.patch.object(mt5_bridge, "_port_available", return_value=False), \
+             mock.patch.object(mt5_bridge, "_describe_port_conflict", return_value="port taken by X"):
+            with self.assertRaises(SystemExit) as ctx:
+                mt5_bridge.main()
+        self.assertEqual(ctx.exception.code, mt5_bridge.EXIT_CODE_PORT_CONFLICT)
+        self.assertNotEqual(mt5_bridge.EXIT_CODE_PORT_CONFLICT, 1)
 
 
 if __name__ == "__main__":

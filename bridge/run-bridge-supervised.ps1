@@ -61,6 +61,14 @@ $BackoffThreshold        = 3
 $FastFailThresholdSeconds = 3
 $consecutiveFailures = 0
 
+# Must match mt5_bridge.py's EXIT_CODE_PORT_CONFLICT exactly -- that's how
+# the exe signals "another live KawkabatBridge instance already holds the
+# port" as distinct from a generic crash. This condition will NEVER resolve
+# itself by retrying every 2-10s (the other instance isn't going anywhere on
+# its own), so it gets its own path below: log clearly and stop the loop
+# entirely, rather than spinning into the same conflict forever.
+$ExitCodePortConflict = 78
+
 function Get-RestartDelay {
     if ($consecutiveFailures -ge $BackoffThreshold) { return $BackoffSleepSeconds }
     return $BaseSleepSeconds
@@ -93,6 +101,11 @@ while ($true) {
     $proc = Start-Process -FilePath $ExePath -WorkingDirectory (Split-Path -Parent $ExePath) -PassThru -Wait -WindowStyle Hidden `
         -RedirectStandardOutput $StdOutLog -RedirectStandardError $StdErrLog
     $ranSeconds = ((Get-Date) - $launchedAt).TotalSeconds
+
+    if ($proc.ExitCode -eq $ExitCodePortConflict) {
+        Write-SupervisorLog "[FATAL] Port is held by ANOTHER running KawkabatBridge instance (see $StdOutLog for exactly which path). Stopping this restart loop instead of retrying into the same conflict every few seconds forever. Task Scheduler's own RestartCount/RestartInterval (about once/minute) remains as a slow fallback in case the conflict resolves on its own; to recover immediately after fixing it, run: Start-ScheduledTask -TaskName 'KawkabatMT5Bridge'"
+        exit $ExitCodePortConflict
+    }
 
     if ($ranSeconds -lt $FastFailThresholdSeconds) {
         $consecutiveFailures++

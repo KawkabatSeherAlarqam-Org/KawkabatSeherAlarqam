@@ -14,6 +14,8 @@ import socket
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import MetaTrader5 as mt5
@@ -66,6 +68,11 @@ if hasattr(sys.stdout, "reconfigure"):
 
 HOST = "127.0.0.1"
 PORT = 8771
+
+# Distinct from a bare sys.exit(1) so run-bridge-supervised.ps1 can tell "port
+# taken by another live KawkabatBridge instance" apart from a generic crash
+# and stop its restart loop instead of retrying into the same wall forever.
+EXIT_CODE_PORT_CONFLICT = 78
 
 
 def _parse_allowed_origins() -> list[str]:
@@ -834,6 +841,12 @@ def diagnostics():
         # which one is actually serving traffic instead of assuming it.
         "run_mode": "exe" if getattr(sys, "frozen", False) else "script",
         "executable": sys.executable,
+        # Unlike "executable" above (python.exe itself in script mode --
+        # identical across every dev checkout), this is what actually
+        # distinguishes "which running copy is this" -- what
+        # _describe_port_conflict() compares when two instances race for
+        # PORT.
+        "instance_path": _instance_identity_path(),
     }), 200
 
 
@@ -1103,10 +1116,66 @@ def _port_available(host: str, port: int) -> bool:
     return True
 
 
+def _instance_identity_path() -> str:
+    """Path that uniquely identifies "this running copy" — the exe's own
+    path when frozen, or the resolved mt5_bridge.py path in script mode
+    (sys.executable there is just python.exe, identical across every dev
+    checkout, useless for telling two copies apart). Reused by /diagnostics
+    (as "instance_path") and by the port-conflict check below, so both
+    report the exact same identifier for the exact same running process.
+    """
+    if getattr(sys, "frozen", False):
+        return sys.executable
+    return str(Path(__file__).resolve())
+
+
+def _describe_port_conflict(port: int) -> str:
+    """Port is already bound at startup — identifies who's holding it via
+    that instance's own GET /diagnostics before giving up, instead of a bare
+    "port busy" message that leaves the user guessing which of possibly
+    several installed copies (dev checkout vs. installed exe) is the one
+    actually running. Never raises — always returns a message string.
+    """
+    my_path = _instance_identity_path()
+    url = f"http://{HOST}:{port}/diagnostics"
+    try:
+        with urllib.request.urlopen(url, timeout=2) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return (
+            f"المنفذ {port} مشغول بالفعل على {HOST}، لكن تعذّر الاستعلام عن {url} لمعرفة من يشغّله "
+            f"({type(e).__name__}: {e}) — قد لا تكون الخدمة على هذا المنفذ جسر Kawkabat إطلاقاً. "
+            f"أوقف العملية التي تستخدم المنفذ يدوياً ثم أعد المحاولة."
+        )
+
+    other_path = data.get("instance_path") or data.get("executable")
+    if not other_path:
+        return (
+            f"المنفذ {port} مشغول بالفعل، واستجاب {url} لكن بلا حقل يحدّد مسار العملية الشاغلة "
+            f"(نسخة جسر أقدم؟). أوقف العملية التي تستخدم المنفذ يدوياً ثم أعد المحاولة."
+        )
+    if other_path == my_path:
+        return (
+            f"المنفذ {port} مشغول بنسخة أخرى من KawkabatBridge تعمل من **نفس المسار بالضبط**:\n"
+            f"  {my_path}\n"
+            f"على الأرجح عملية سابقة لم تُغلق بالكامل. أوقفها (Stop-Process) ثم أعد المحاولة."
+        )
+    return (
+        f"المنفذ {port} مشغول بالفعل بنسخة أخرى من KawkabatBridge تعمل من:\n"
+        f"  {other_path}\n"
+        f"بينما هذه النسخة (التي حاولت الإقلاع الآن) من:\n"
+        f"  {my_path}\n"
+        f"لا يمكن تشغيل نسختين معاً على نفس المنفذ ({port}) — أوقف إحداهما (غالباً الأنسب إيقاف نسخة "
+        f"التطوير والإبقاء على النسخة المثبَّتة، أو العكس حسب حاجتك) ثم أعد المحاولة."
+    )
+
+
 def main() -> None:
     if not _port_available(HOST, PORT):
-        print(f"[FATAL] المنفذ {PORT} مشغول بالفعل على {HOST}. أوقف العملية التي تستخدمه أو أغلقها ثم أعد المحاولة.")
-        sys.exit(1)
+        message = _describe_port_conflict(PORT)
+        logger.error(f"port {PORT} conflict at startup, refusing to start (exit code {EXIT_CODE_PORT_CONFLICT})")
+        print(f"[FATAL] {message}")
+        sys.exit(EXIT_CODE_PORT_CONFLICT)
 
     discovery = get_terminal_path()
     logger.info(f"data dir: {DATA_DIR} (source: {DATA_DIR_SOURCE})")
