@@ -10,7 +10,7 @@
   </style>
 </head>
 <body>
-  <iframe id="appFrame" title="Magic Numbers Constellation" src="./kawkabat-v209-layer-36.html"></iframe>
+  <iframe id="appFrame" title="Magic Numbers Constellation" src="/kawkabat-v209-layer-36.html"></iframe>
   <script>
   (function(){
     'use strict';
@@ -142,5 +142,172 @@
     startPolling();
   }());
   </script>
+
+
+<!-- KAWKABAT_V24_SELF_HIDE_LEFT_TRIO_START -->
+<script id="kawkabatV24SelfHideLeftTrio">
+(function(){
+"use strict";
+
+function norm(s){
+  return String(s==null?"":s).replace(/\s+/g,"").trim();
+}
+function buttonKey(b){
+  return norm(
+    (b.textContent||"")+" "+
+    (b.getAttribute("title")||"")+" "+
+    (b.getAttribute("aria-label")||"")
+  ).toLowerCase();
+}
+function isPlus(b){
+  var t=norm(b.textContent);
+  var k=buttonKey(b);
+  return t==="+" || t==="＋" || t==="➕" ||
+         /\bplus\b|\badd\b|\bincrease\b/.test(k);
+}
+function isMinus(b){
+  var t=norm(b.textContent);
+  var k=buttonKey(b);
+  return t==="-" || t==="−" || t==="–" || t==="—" || t==="➖" ||
+         /\bminus\b|\bdecrease\b/.test(k);
+}
+function visible(b){
+  try{
+    var r=b.getBoundingClientRect(),s=getComputedStyle(b);
+    return r.width>20&&r.height>20&&s.display!=="none"&&s.visibility!=="hidden";
+  }catch(e){return false;}
+}
+function removeButtonAndTinyWrapper(b){
+  if(!b)return;
+  var target=b;
+  try{
+    var p=b.parentElement;
+    if(p){
+      var br=b.getBoundingClientRect(),pr=p.getBoundingClientRect();
+      var buttons=p.querySelectorAll(":scope > button");
+      var children=Array.prototype.filter.call(p.children,function(x){
+        return getComputedStyle(x).display!=="none";
+      });
+      if(buttons.length===1 &&
+         children.length===1 &&
+         Math.abs(pr.width-br.width)<=14 &&
+         Math.abs(pr.height-br.height)<=14 &&
+         pr.width<130 && pr.height<120){
+        target=p;
+      }
+    }
+  }catch(e){}
+  try{
+    target.setAttribute("data-kawkabat-v24-removed","1");
+    target.remove();
+  }catch(e){
+    try{target.style.setProperty("display","none","important");}catch(x){}
+  }
+}
+function excluded(b){
+  return !!(b.closest && (
+    b.closest("#v62MetalBar") ||
+    b.closest("#v47Toolbar") ||
+    b.closest("#v66DrawingToolbar") ||
+    b.closest("#v73ZoomGroup") ||
+    b.closest("#v63ZoomGroup")
+  ));
+}
+function findAndRemove(){
+  try{
+    var groups=Array.prototype.slice.call(
+      document.querySelectorAll("div,section,header,nav,aside,span,td")
+    );
+
+    for(var g=0;g<groups.length;g++){
+      var group=groups[g];
+      if(excluded(group)) continue;
+
+      var buttons=Array.prototype.slice.call(group.querySelectorAll(":scope > button"));
+      if(buttons.length<5 || buttons.length>8) continue;
+
+      var active=buttons.filter(function(b){return visible(b)&&!excluded(b);});
+      if(active.length<5) continue;
+
+      if(!isPlus(active[0]) || !isMinus(active[1])) continue;
+
+      var r0=active[0].getBoundingClientRect();
+      var r1=active[1].getBoundingClientRect();
+      var r4=active[4].getBoundingClientRect();
+
+      if(r0.left>650 || r0.top>260) continue;
+      if(Math.abs(r0.top-r1.top)>14 || Math.abs(r0.top-r4.top)>18) continue;
+
+      removeButtonAndTinyWrapper(active[0]);
+      removeButtonAndTinyWrapper(active[1]);
+      removeButtonAndTinyWrapper(active[2]);
+
+      document.documentElement.setAttribute("data-kawkabat-v24-left-trio-hidden","true");
+      return true;
+    }
+
+    var all=Array.prototype.slice.call(document.querySelectorAll("button")).filter(function(b){
+      if(!visible(b)||excluded(b))return false;
+      var r=b.getBoundingClientRect();
+      return r.left<650 && r.top<260 &&
+             r.width>=28 && r.width<=120 &&
+             r.height>=28 && r.height<=110;
+    });
+
+    for(var i=0;i+4<all.length;i++){
+      if(!isPlus(all[i]) || !isMinus(all[i+1]))continue;
+
+      var row=all.slice(i,i+5);
+      var base=row[0].getBoundingClientRect();
+      var ok=true;
+      for(var j=1;j<row.length;j++){
+        var rr=row[j].getBoundingClientRect();
+        if(Math.abs(rr.top-base.top)>18){ok=false;break;}
+        if(rr.left<=row[j-1].getBoundingClientRect().left){ok=false;break;}
+      }
+      if(!ok)continue;
+
+      removeButtonAndTinyWrapper(row[0]);
+      removeButtonAndTinyWrapper(row[1]);
+      removeButtonAndTinyWrapper(row[2]);
+
+      document.documentElement.setAttribute("data-kawkabat-v24-left-trio-hidden","true");
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+var attempts=0;
+function run(){
+  attempts++;
+  if(findAndRemove())return;
+  if(attempts<240)setTimeout(run,100);
+}
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",function(){setTimeout(run,20);});
+}else{
+  setTimeout(run,20);
+}
+window.addEventListener("load",function(){setTimeout(run,50);});
+
+try{
+  new MutationObserver(function(){
+    if(document.documentElement.getAttribute("data-kawkabat-v24-left-trio-hidden")!=="true"){
+      findAndRemove();
+    }
+  }).observe(document.documentElement,{childList:true,subtree:true});
+}catch(e){}
+
+window.__KAWKABAT_V24_AUDIT=function(){
+  return{
+    version:"V24_SELF_SOURCE",
+    hidden:document.documentElement.getAttribute("data-kawkabat-v24-left-trio-hidden")==="true"
+  };
+};
+}());
+</script>
+<!-- KAWKABAT_V24_SELF_HIDE_LEFT_TRIO_END -->
+
 </body>
 </html>

@@ -10,7 +10,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3}
 </style>
 </head>
 <body>
-<iframe id="appFrame" title="Magic Numbers Constellation" allowfullscreen src="./kawkabat-v209-layer-08.html"></iframe>
+<iframe id="appFrame" title="Magic Numbers Constellation" allowfullscreen src="/kawkabat-v209-layer-08.html"></iframe>
 <script>
 (function(){
 'use strict';
@@ -64,7 +64,7 @@ function ensureStyles(doc){if(doc.getElementById('v66Styles'))return;var s=doc.c
 function eyeSvg(){return '<svg viewBox="0 0 24 24"><path class="eye" d="M2.4 12s3.6-5.3 9.6-5.3 9.6 5.3 9.6 5.3-3.6 5.3-9.6 5.3S2.4 12 2.4 12z"/><circle class="iris" cx="12" cy="12" r="3.45"/><circle class="pupil" cx="12" cy="12" r="1.55"/><path class="slash" d="M4 20 20 4"/></svg>';}
 function panelSvg(){return '<svg viewBox="0 0 24 24"><rect class="shell" x="3.2" y="4" width="17.6" height="16" rx="1.8"/><rect class="side" x="4.8" y="5.7" width="4.3" height="12.6" rx=".7"/><path class="line" d="M11.7 8h6.5M11.7 12h6.5M11.7 16h6.5"/><path class="slash" d="M4 20 20 4"/></svg>';}
 function makeBtn(doc,id,title,html,fn){var b=doc.createElement('button');b.id=id;b.type='button';b.title=title;b.setAttribute('aria-label',title);b.innerHTML=html;b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();fn();});return b;}
-function syncButtons(doc){var w=doc.getElementById('v66WheelBtn'),p=doc.getElementById('v66PanelBtn'),pen=doc.getElementById('v64PencilBtn');if(w){w.dataset.hidden=wheelVisible?'false':'true';w.title=wheelVisible?'إخفاء العجلة / Hide wheel':'إظهار العجلة / Show wheel';}if(p){p.dataset.hidden=panelVisible?'false':'true';p.title=panelVisible?'إخفاء لوحة المخطط / Hide chart panel':'إظهار لوحة المخطط / Show chart panel';}if(pen)pen.dataset.open=drawingOpen?'true':'false';}
+function syncButtons(doc){var w=doc.getElementById('v66WheelBtn'),pen=doc.getElementById('v64PencilBtn');if(w){w.dataset.hidden=wheelVisible?'false':'true';w.title=wheelVisible?'إخفاء العجلة / Hide wheel':'إظهار العجلة / Show wheel';}if(pen)pen.dataset.open=drawingOpen?'true':'false';}
 function ensureToolbar(doc){ensureStyles(doc);if(toolbar&&toolbar.isConnected)return toolbar;toolbar=doc.getElementById('v66DrawingToolbar');if(toolbar)return toolbar;toolbar=doc.createElement('div');toolbar.id='v66DrawingToolbar';toolbar.hidden=true;var tools=[['↶','undo',undo],['↷','redo',redo],['✎','pencil',function(){setTool('pencil');}],['⌫','erase',function(){setTool('erase');}],['╱','line',function(){setTool('line');}],['▭','rect',function(){setTool('rect');}],['◯','ellipse',function(){setTool('ellipse');}],['T','text',function(){setTool('text');}],['✕','clear',clearAll]];for(var i=0;i<tools.length;i++){var b=doc.createElement('button');b.type='button';b.textContent=tools[i][0];b.title=tools[i][1];b.dataset.tool=tools[i][1];b.addEventListener('click',tools[i][2]);toolbar.appendChild(b);}doc.body.appendChild(toolbar);updateDrawingUi();return toolbar;}
 function snapshot(){undoStack.push(JSON.stringify(drawingObjects));if(undoStack.length>40)undoStack.shift();redoStack=[];}
 function undo(){if(!undoStack.length)return;redoStack.push(JSON.stringify(drawingObjects));drawingObjects=JSON.parse(undoStack.pop());renderDrawing();updateDrawingUi();}
@@ -78,10 +78,186 @@ function point(e){var r=overlay.getBoundingClientRect();return{x:(e.clientX-r.le
 function bindOverlay(){overlay.addEventListener('pointerdown',function(e){if(!drawingOpen||e.button!==0)return;var p=point(e);if(drawingTool==='text'){var text=prompt('اكتب النص / Enter text');if(text){snapshot();drawingObjects.push({type:'text',start:p,text:text});renderDrawing();updateDrawingUi();}return;}snapshot();drawingCurrent={type:drawingTool,start:p,end:p,points:(drawingTool==='pencil'||drawingTool==='erase')?[p]:null};drawingObjects.push(drawingCurrent);overlay.setPointerCapture&&overlay.setPointerCapture(e.pointerId);e.preventDefault();});overlay.addEventListener('pointermove',function(e){if(!drawingCurrent)return;var p=point(e);drawingCurrent.end=p;if(drawingCurrent.points)drawingCurrent.points.push(p);renderDrawing();e.preventDefault();});function finish(){drawingCurrent=null;updateDrawingUi();}overlay.addEventListener('pointerup',finish);overlay.addEventListener('pointercancel',finish);}
 function renderDrawing(){if(!overlay)return;var r=overlay.getBoundingClientRect(),dpr=overlay.width/Math.max(1,r.width),ctx=overlay.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,r.width,r.height);for(var i=0;i<drawingObjects.length;i++){var o=drawingObjects[i],s={x:o.start.x*r.width,y:o.start.y*r.height},e={x:o.end.x*r.width,y:o.end.y*r.height};ctx.save();ctx.lineWidth=o.type==='erase'?18:3;ctx.strokeStyle='#1479bd';ctx.fillStyle='#173f60';ctx.lineCap='round';ctx.lineJoin='round';if(o.type==='erase')ctx.globalCompositeOperation='destination-out';if(o.type==='pencil'||o.type==='erase'){var pts=o.points||[];if(pts.length){ctx.beginPath();ctx.moveTo(pts[0].x*r.width,pts[0].y*r.height);for(var j=1;j<pts.length;j++)ctx.lineTo(pts[j].x*r.width,pts[j].y*r.height);ctx.stroke();}}else if(o.type==='line'){ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(e.x,e.y);ctx.stroke();}else if(o.type==='rect'){ctx.strokeRect(Math.min(s.x,e.x),Math.min(s.y,e.y),Math.abs(e.x-s.x),Math.abs(e.y-s.y));}else if(o.type==='ellipse'){ctx.beginPath();ctx.ellipse((s.x+e.x)/2,(s.y+e.y)/2,Math.max(.5,Math.abs(e.x-s.x)/2),Math.max(.5,Math.abs(e.y-s.y)/2),0,0,Math.PI*2);ctx.stroke();}else if(o.type==='text'){ctx.font='700 24px Tahoma,Arial';ctx.fillText(o.text,s.x,s.y);}ctx.restore();}}
 function toggleDrawing(doc){drawingOpen=!drawingOpen;var tb=ensureToolbar(doc);tb.hidden=!drawingOpen;ensureOverlay();if(overlay)overlay.style.pointerEvents=drawingOpen?'auto':'none';syncButtons(doc);}
-function install(){var info=findBar();if(!info)return false;ensureStyles(info.doc);var pencil=info.doc.getElementById('v64PencilBtn');if(pencil&&!pencil.dataset.v66Bound){var clone=pencil.cloneNode(true);pencil.parentNode.replaceChild(clone,pencil);clone.dataset.v66Bound='true';clone.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();toggleDrawing(info.doc);});pencil=clone;}var wheel=info.doc.getElementById('v66WheelBtn');if(!wheel)wheel=makeBtn(info.doc,'v66WheelBtn','إخفاء العجلة / Hide wheel',eyeSvg(),function(){wheelVisible=!wheelVisible;writeState(WHEEL_KEY,wheelVisible);applyWheel();syncButtons(info.doc);});var panel=info.doc.getElementById('v66PanelBtn');if(!panel)panel=makeBtn(info.doc,'v66PanelBtn','إخفاء لوحة المخطط / Hide chart panel',panelSvg(),function(){panelVisible=!panelVisible;writeState(PANEL_KEY,panelVisible);applyPanel();syncButtons(info.doc);});var divider=info.doc.getElementById('v66ToolsDivider');if(!divider){divider=info.doc.createElement('span');divider.id='v66ToolsDivider';}var zoom=info.doc.getElementById('v63ZoomGroup');var anchor=zoom||info.bar.firstChild;if(pencil)info.bar.insertBefore(pencil,anchor);info.bar.insertBefore(wheel,anchor);info.bar.insertBefore(panel,anchor);info.bar.insertBefore(divider,anchor);var old=info.doc.getElementById('v64PencilDivider');if(old)old.style.display='none';applyPanel();applyWheel();if(drawingOpen){ensureToolbar(info.doc);ensureOverlay();positionOverlay();}syncButtons(info.doc);try{info.doc.defaultView.__auditKawkabatV66=function(){return{ok:true,panelShellHidden:!panelVisible,scrollRailHidden:!panelVisible,pencilResponsive:!!pencil&&pencil.dataset.v66Bound==='true',drawingToolbarPresent:!!toolbar,order:['pencil','wheel-eye','panel','zoom'],wheelVisible:wheelVisible,panelVisible:panelVisible};};}catch(error){}return true;}
-function start(){panelVisible=readState(PANEL_KEY,true);wheelVisible=readState(WHEEL_KEY,true);if(timer)clearInterval(timer);timer=setInterval(install,180);install();}
+function install(){var info=findBar();if(!info)return false;ensureStyles(info.doc);var pencil=info.doc.getElementById('v64PencilBtn');if(pencil&&!pencil.dataset.v66Bound){var clone=pencil.cloneNode(true);pencil.parentNode.replaceChild(clone,pencil);clone.dataset.v66Bound='true';clone.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();toggleDrawing(info.doc);});pencil=clone;}var wheel=info.doc.getElementById('v66WheelBtn');if(!wheel)wheel=makeBtn(info.doc,'v66WheelBtn','إخفاء العجلة / Hide wheel',eyeSvg(),function(){wheelVisible=!wheelVisible;writeState(WHEEL_KEY,wheelVisible);applyWheel();syncButtons(info.doc);});var panel=info.doc.getElementById('v66PanelBtn');if(!panel)panel=makeBtn(info.doc,'v66PanelBtn','إخفاء لوحة المخطط / Hide chart panel',panelSvg(),function(){});var divider=info.doc.getElementById('v66ToolsDivider');if(!divider){divider=info.doc.createElement('span');divider.id='v66ToolsDivider';}var zoom=info.doc.getElementById('v63ZoomGroup');var anchor=zoom||info.bar.firstChild;if(pencil)info.bar.insertBefore(pencil,anchor);info.bar.insertBefore(wheel,anchor);info.bar.insertBefore(panel,anchor);info.bar.insertBefore(divider,anchor);var old=info.doc.getElementById('v64PencilDivider');if(old)old.style.display='none';applyWheel();if(drawingOpen){ensureToolbar(info.doc);ensureOverlay();positionOverlay();}syncButtons(info.doc);try{info.doc.defaultView.__auditKawkabatV66=function(){return{ok:true,panelControlOwner:'V67',pencilResponsive:!!pencil&&pencil.dataset.v66Bound==='true',drawingToolbarPresent:!!toolbar,order:['pencil','wheel-eye','panel','zoom'],wheelVisible:wheelVisible};};}catch(error){}return true;}
+function start(){
+  panelVisible=readState(PANEL_KEY,true);
+  /* Always boot with the wheel visible. A stale saved "false" used to open an
+     empty beige page while the quote and toolbar stayed visible. */
+  wheelVisible=true;
+  writeState(WHEEL_KEY,true);
+  if(timer)clearInterval(timer);
+  timer=setInterval(install,180);
+  install();
+}
 frame.addEventListener('load',start);start();
 }());
 </script>
+
+
+<!-- KAWKABAT_V24_SELF_HIDE_LEFT_TRIO_START -->
+<script id="kawkabatV24SelfHideLeftTrio">
+(function(){
+"use strict";
+
+function norm(s){
+  return String(s==null?"":s).replace(/\s+/g,"").trim();
+}
+function buttonKey(b){
+  return norm(
+    (b.textContent||"")+" "+
+    (b.getAttribute("title")||"")+" "+
+    (b.getAttribute("aria-label")||"")
+  ).toLowerCase();
+}
+function isPlus(b){
+  var t=norm(b.textContent);
+  var k=buttonKey(b);
+  return t==="+" || t==="＋" || t==="➕" ||
+         /\bplus\b|\badd\b|\bincrease\b/.test(k);
+}
+function isMinus(b){
+  var t=norm(b.textContent);
+  var k=buttonKey(b);
+  return t==="-" || t==="−" || t==="–" || t==="—" || t==="➖" ||
+         /\bminus\b|\bdecrease\b/.test(k);
+}
+function visible(b){
+  try{
+    var r=b.getBoundingClientRect(),s=getComputedStyle(b);
+    return r.width>20&&r.height>20&&s.display!=="none"&&s.visibility!=="hidden";
+  }catch(e){return false;}
+}
+function removeButtonAndTinyWrapper(b){
+  if(!b)return;
+  var target=b;
+  try{
+    var p=b.parentElement;
+    if(p){
+      var br=b.getBoundingClientRect(),pr=p.getBoundingClientRect();
+      var buttons=p.querySelectorAll(":scope > button");
+      var children=Array.prototype.filter.call(p.children,function(x){
+        return getComputedStyle(x).display!=="none";
+      });
+      if(buttons.length===1 &&
+         children.length===1 &&
+         Math.abs(pr.width-br.width)<=14 &&
+         Math.abs(pr.height-br.height)<=14 &&
+         pr.width<130 && pr.height<120){
+        target=p;
+      }
+    }
+  }catch(e){}
+  try{
+    target.setAttribute("data-kawkabat-v24-removed","1");
+    target.remove();
+  }catch(e){
+    try{target.style.setProperty("display","none","important");}catch(x){}
+  }
+}
+function excluded(b){
+  return !!(b.closest && (
+    b.closest("#v62MetalBar") ||
+    b.closest("#v47Toolbar") ||
+    b.closest("#v66DrawingToolbar") ||
+    b.closest("#v73ZoomGroup") ||
+    b.closest("#v63ZoomGroup")
+  ));
+}
+function findAndRemove(){
+  try{
+    var groups=Array.prototype.slice.call(
+      document.querySelectorAll("div,section,header,nav,aside,span,td")
+    );
+
+    for(var g=0;g<groups.length;g++){
+      var group=groups[g];
+      if(excluded(group)) continue;
+
+      var buttons=Array.prototype.slice.call(group.querySelectorAll(":scope > button"));
+      if(buttons.length<5 || buttons.length>8) continue;
+
+      var active=buttons.filter(function(b){return visible(b)&&!excluded(b);});
+      if(active.length<5) continue;
+
+      if(!isPlus(active[0]) || !isMinus(active[1])) continue;
+
+      var r0=active[0].getBoundingClientRect();
+      var r1=active[1].getBoundingClientRect();
+      var r4=active[4].getBoundingClientRect();
+
+      if(r0.left>650 || r0.top>260) continue;
+      if(Math.abs(r0.top-r1.top)>14 || Math.abs(r0.top-r4.top)>18) continue;
+
+      removeButtonAndTinyWrapper(active[0]);
+      removeButtonAndTinyWrapper(active[1]);
+      removeButtonAndTinyWrapper(active[2]);
+
+      document.documentElement.setAttribute("data-kawkabat-v24-left-trio-hidden","true");
+      return true;
+    }
+
+    var all=Array.prototype.slice.call(document.querySelectorAll("button")).filter(function(b){
+      if(!visible(b)||excluded(b))return false;
+      var r=b.getBoundingClientRect();
+      return r.left<650 && r.top<260 &&
+             r.width>=28 && r.width<=120 &&
+             r.height>=28 && r.height<=110;
+    });
+
+    for(var i=0;i+4<all.length;i++){
+      if(!isPlus(all[i]) || !isMinus(all[i+1]))continue;
+
+      var row=all.slice(i,i+5);
+      var base=row[0].getBoundingClientRect();
+      var ok=true;
+      for(var j=1;j<row.length;j++){
+        var rr=row[j].getBoundingClientRect();
+        if(Math.abs(rr.top-base.top)>18){ok=false;break;}
+        if(rr.left<=row[j-1].getBoundingClientRect().left){ok=false;break;}
+      }
+      if(!ok)continue;
+
+      removeButtonAndTinyWrapper(row[0]);
+      removeButtonAndTinyWrapper(row[1]);
+      removeButtonAndTinyWrapper(row[2]);
+
+      document.documentElement.setAttribute("data-kawkabat-v24-left-trio-hidden","true");
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+var attempts=0;
+function run(){
+  attempts++;
+  if(findAndRemove())return;
+  if(attempts<240)setTimeout(run,100);
+}
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",function(){setTimeout(run,20);});
+}else{
+  setTimeout(run,20);
+}
+window.addEventListener("load",function(){setTimeout(run,50);});
+
+try{
+  new MutationObserver(function(){
+    if(document.documentElement.getAttribute("data-kawkabat-v24-left-trio-hidden")!=="true"){
+      findAndRemove();
+    }
+  }).observe(document.documentElement,{childList:true,subtree:true});
+}catch(e){}
+
+window.__KAWKABAT_V24_AUDIT=function(){
+  return{
+    version:"V24_SELF_SOURCE",
+    hidden:document.documentElement.getAttribute("data-kawkabat-v24-left-trio-hidden")==="true"
+  };
+};
+}());
+</script>
+<!-- KAWKABAT_V24_SELF_HIDE_LEFT_TRIO_END -->
+
 </body>
 </html>

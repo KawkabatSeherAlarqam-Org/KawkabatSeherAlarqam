@@ -1,1 +1,168 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>V29 Outer Frame Spacing</title><style>html,body,#appFrame{margin:0;width:100%;height:100%;border:0;overflow:hidden;background:#f7f1e3}#appFrame{display:block}</style></head><body><iframe id="appFrame" src="./kawkabat-v209-layer-27.html"></iframe><script>(function(){'use strict';var frame=document.getElementById('appFrame'),poll=null;function findDoc(d,n){if(!d||n>36)return null;if(d.getElementById('wheel'))return d;var fs=d.querySelectorAll('iframe');for(var i=0;i<fs.length;i++){try{var r=findDoc(fs[i].contentDocument,n+1);if(r)return r}catch(e){}}return null}function setR(node,delta,key){if(!node)return false;var a='data-v29-r-'+key,o=node.getAttribute(a);if(o==null){o=node.getAttribute('r');node.setAttribute(a,o)}o=Number(o);if(!Number.isFinite(o))return false;node.setAttribute('r',String(o+delta));return true}function moveOrnament(g,a){if(!g)return false;var k='data-v29-transform',o=g.getAttribute(k);if(o==null){o=g.getAttribute('transform')||'';g.setAttribute(k,o)}var t=a===360?'translate(0 -26)':a===90?'translate(26 0)':a===180?'translate(0 26)':a===270?'translate(-26 0)':'';g.setAttribute('transform',(o+' '+t).trim());return true}function apply(){try{var d=findDoc(frame.contentDocument,0);if(!d)return false;var f=d.getElementById('outerBlackFrame'),os=d.getElementById('cardinalOrnaments');if(!f||!os)return false;var shadow=f.querySelector('.outer-frame-shadow'),band=f.querySelector('.outer-black-band'),hi=f.querySelector('.outer-black-highlight'),thick=f.querySelector('.outer-gold-line.thick'),thin=f.querySelector('.outer-gold-line.thin'),m=f.querySelectorAll('.outer-gold-line.medium');if(!shadow||!band||!hi||!thick||!thin||m.length!==2)return false;var mr0=Number(m[0].getAttribute('r')),mr1=Number(m[1].getAttribute('r')),outer=mr0>mr1?m[0]:m[1],inner=mr0>mr1?m[1]:m[0];setR(inner,4,'inner');setR(thin,10,'thin');setR(band,16,'band');setR(shadow,16,'shadow');setR(hi,22,'highlight');setR(outer,28,'outer-medium');setR(thick,34,'thick');var c=0;os.querySelectorAll('.cardinal-ornament').forEach(function(g){if(moveOrnament(g,Number(g.getAttribute('data-angle'))))c++});d.documentElement.dataset.outerFramesProgressiveSpacingV29='true';d.documentElement.dataset.angleRingChanged='false';if(d.defaultView)d.defaultView.__auditKawkabatOuterFramesProgressiveSpacingV29=function(){return{ok:c===4,changedArea:'outer-frame-spacing-only',shiftPattern:[4,10,16,16,22,28,34],ornamentShift:26,angleBandChanged:false,brownLineChanged:false,angleNumbersChanged:false,angleTicksChanged:false,zodiacChanged:false,innerWheelGeometryChanged:false}};return c===4}catch(e){return false}}function start(){if(poll)clearInterval(poll);var n=0;poll=setInterval(function(){n++;if(apply()||n>=1200){clearInterval(poll);poll=null}},100)}frame.addEventListener('load',start);start()}());</script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>V29 Outer Frame Spacing</title><style>html,body,#appFrame{margin:0;width:100%;height:100%;border:0;overflow:hidden;background:#f7f1e3}#appFrame{display:block}</style></head><body><iframe id="appFrame" src="/kawkabat-v209-layer-27.html"></iframe><script>(function(){'use strict';var frame=document.getElementById('appFrame'),poll=null;function findDoc(d,n){if(!d||n>36)return null;if(d.getElementById('wheel'))return d;var fs=d.querySelectorAll('iframe');for(var i=0;i<fs.length;i++){try{var r=findDoc(fs[i].contentDocument,n+1);if(r)return r}catch(e){}}return null}function setR(node,delta,key){if(!node)return false;var a='data-v29-r-'+key,o=node.getAttribute(a);if(o==null){o=node.getAttribute('r');node.setAttribute(a,o)}o=Number(o);if(!Number.isFinite(o))return false;node.setAttribute('r',String(o+delta));return true}function moveOrnament(g,a){if(!g)return false;var k='data-v29-transform',o=g.getAttribute(k);if(o==null){o=g.getAttribute('transform')||'';g.setAttribute(k,o)}var t=a===360?'translate(0 -26)':a===90?'translate(26 0)':a===180?'translate(0 26)':a===270?'translate(-26 0)':'';g.setAttribute('transform',(o+' '+t).trim());return true}function apply(){try{var d=findDoc(frame.contentDocument,0);if(!d)return false;var f=d.getElementById('outerBlackFrame'),os=d.getElementById('cardinalOrnaments');if(!f||!os)return false;var shadow=f.querySelector('.outer-frame-shadow'),band=f.querySelector('.outer-black-band'),hi=f.querySelector('.outer-black-highlight'),thick=f.querySelector('.outer-gold-line.thick'),thin=f.querySelector('.outer-gold-line.thin'),m=f.querySelectorAll('.outer-gold-line.medium');if(!shadow||!band||!hi||!thick||!thin||m.length!==2)return false;var mr0=Number(m[0].getAttribute('r')),mr1=Number(m[1].getAttribute('r')),outer=mr0>mr1?m[0]:m[1],inner=mr0>mr1?m[1]:m[0];setR(inner,4,'inner');setR(thin,10,'thin');setR(band,16,'band');setR(shadow,16,'shadow');setR(hi,22,'highlight');setR(outer,28,'outer-medium');setR(thick,34,'thick');var c=0;os.querySelectorAll('.cardinal-ornament').forEach(function(g){if(moveOrnament(g,Number(g.getAttribute('data-angle'))))c++});d.documentElement.dataset.outerFramesProgressiveSpacingV29='true';d.documentElement.dataset.angleRingChanged='false';if(d.defaultView)d.defaultView.__auditKawkabatOuterFramesProgressiveSpacingV29=function(){return{ok:c===4,changedArea:'outer-frame-spacing-only',shiftPattern:[4,10,16,16,22,28,34],ornamentShift:26,angleBandChanged:false,brownLineChanged:false,angleNumbersChanged:false,angleTicksChanged:false,zodiacChanged:false,innerWheelGeometryChanged:false}};return c===4}catch(e){return false}}function start(){if(poll)clearInterval(poll);var n=0;poll=setInterval(function(){n++;if(apply()||n>=1200){clearInterval(poll);poll=null}},100)}frame.addEventListener('load',start);start()}());</script>
+
+<!-- KAWKABAT_V24_SELF_HIDE_LEFT_TRIO_START -->
+<script id="kawkabatV24SelfHideLeftTrio">
+(function(){
+"use strict";
+
+function norm(s){
+  return String(s==null?"":s).replace(/\s+/g,"").trim();
+}
+function buttonKey(b){
+  return norm(
+    (b.textContent||"")+" "+
+    (b.getAttribute("title")||"")+" "+
+    (b.getAttribute("aria-label")||"")
+  ).toLowerCase();
+}
+function isPlus(b){
+  var t=norm(b.textContent);
+  var k=buttonKey(b);
+  return t==="+" || t==="＋" || t==="➕" ||
+         /\bplus\b|\badd\b|\bincrease\b/.test(k);
+}
+function isMinus(b){
+  var t=norm(b.textContent);
+  var k=buttonKey(b);
+  return t==="-" || t==="−" || t==="–" || t==="—" || t==="➖" ||
+         /\bminus\b|\bdecrease\b/.test(k);
+}
+function visible(b){
+  try{
+    var r=b.getBoundingClientRect(),s=getComputedStyle(b);
+    return r.width>20&&r.height>20&&s.display!=="none"&&s.visibility!=="hidden";
+  }catch(e){return false;}
+}
+function removeButtonAndTinyWrapper(b){
+  if(!b)return;
+  var target=b;
+  try{
+    var p=b.parentElement;
+    if(p){
+      var br=b.getBoundingClientRect(),pr=p.getBoundingClientRect();
+      var buttons=p.querySelectorAll(":scope > button");
+      var children=Array.prototype.filter.call(p.children,function(x){
+        return getComputedStyle(x).display!=="none";
+      });
+      if(buttons.length===1 &&
+         children.length===1 &&
+         Math.abs(pr.width-br.width)<=14 &&
+         Math.abs(pr.height-br.height)<=14 &&
+         pr.width<130 && pr.height<120){
+        target=p;
+      }
+    }
+  }catch(e){}
+  try{
+    target.setAttribute("data-kawkabat-v24-removed","1");
+    target.remove();
+  }catch(e){
+    try{target.style.setProperty("display","none","important");}catch(x){}
+  }
+}
+function excluded(b){
+  return !!(b.closest && (
+    b.closest("#v62MetalBar") ||
+    b.closest("#v47Toolbar") ||
+    b.closest("#v66DrawingToolbar") ||
+    b.closest("#v73ZoomGroup") ||
+    b.closest("#v63ZoomGroup")
+  ));
+}
+function findAndRemove(){
+  try{
+    var groups=Array.prototype.slice.call(
+      document.querySelectorAll("div,section,header,nav,aside,span,td")
+    );
+
+    for(var g=0;g<groups.length;g++){
+      var group=groups[g];
+      if(excluded(group)) continue;
+
+      var buttons=Array.prototype.slice.call(group.querySelectorAll(":scope > button"));
+      if(buttons.length<5 || buttons.length>8) continue;
+
+      var active=buttons.filter(function(b){return visible(b)&&!excluded(b);});
+      if(active.length<5) continue;
+
+      if(!isPlus(active[0]) || !isMinus(active[1])) continue;
+
+      var r0=active[0].getBoundingClientRect();
+      var r1=active[1].getBoundingClientRect();
+      var r4=active[4].getBoundingClientRect();
+
+      if(r0.left>650 || r0.top>260) continue;
+      if(Math.abs(r0.top-r1.top)>14 || Math.abs(r0.top-r4.top)>18) continue;
+
+      removeButtonAndTinyWrapper(active[0]);
+      removeButtonAndTinyWrapper(active[1]);
+      removeButtonAndTinyWrapper(active[2]);
+
+      document.documentElement.setAttribute("data-kawkabat-v24-left-trio-hidden","true");
+      return true;
+    }
+
+    var all=Array.prototype.slice.call(document.querySelectorAll("button")).filter(function(b){
+      if(!visible(b)||excluded(b))return false;
+      var r=b.getBoundingClientRect();
+      return r.left<650 && r.top<260 &&
+             r.width>=28 && r.width<=120 &&
+             r.height>=28 && r.height<=110;
+    });
+
+    for(var i=0;i+4<all.length;i++){
+      if(!isPlus(all[i]) || !isMinus(all[i+1]))continue;
+
+      var row=all.slice(i,i+5);
+      var base=row[0].getBoundingClientRect();
+      var ok=true;
+      for(var j=1;j<row.length;j++){
+        var rr=row[j].getBoundingClientRect();
+        if(Math.abs(rr.top-base.top)>18){ok=false;break;}
+        if(rr.left<=row[j-1].getBoundingClientRect().left){ok=false;break;}
+      }
+      if(!ok)continue;
+
+      removeButtonAndTinyWrapper(row[0]);
+      removeButtonAndTinyWrapper(row[1]);
+      removeButtonAndTinyWrapper(row[2]);
+
+      document.documentElement.setAttribute("data-kawkabat-v24-left-trio-hidden","true");
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+var attempts=0;
+function run(){
+  attempts++;
+  if(findAndRemove())return;
+  if(attempts<240)setTimeout(run,100);
+}
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",function(){setTimeout(run,20);});
+}else{
+  setTimeout(run,20);
+}
+window.addEventListener("load",function(){setTimeout(run,50);});
+
+try{
+  new MutationObserver(function(){
+    if(document.documentElement.getAttribute("data-kawkabat-v24-left-trio-hidden")!=="true"){
+      findAndRemove();
+    }
+  }).observe(document.documentElement,{childList:true,subtree:true});
+}catch(e){}
+
+window.__KAWKABAT_V24_AUDIT=function(){
+  return{
+    version:"V24_SELF_SOURCE",
+    hidden:document.documentElement.getAttribute("data-kawkabat-v24-left-trio-hidden")==="true"
+  };
+};
+}());
+</script>
+<!-- KAWKABAT_V24_SELF_HIDE_LEFT_TRIO_END -->
+
+</body></html>

@@ -14,3 +14,9 @@ bridge/installer/dist/
 
 __pycache__/
 *.pyc
+runtime/ami_live.json
+backups/
+backup-*/
+public/*.bak*
+public/*.before-*
+public/_backup*/

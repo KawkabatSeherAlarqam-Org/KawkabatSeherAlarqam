@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>كوكبة الأرقام — AmiBroker محلي</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3;font-family:Arial,sans-serif}#wheel{position:absolute;inset:0;width:100%;height:100%;border:0}
+#quote{position:fixed;z-index:2147483647;top:14px;left:50%;transform:translateX(-50%);direction:ltr;display:flex;align-items:center;gap:16px;min-width:520px;padding:12px 20px;border:1px solid #bd7b12;border-radius:14px;background:#fff1d7;color:#754600;box-shadow:0 4px 14px #0003;font-weight:800}
+#quote.up{background:#d8ffe2;color:#087b2d;border-color:#20a94f}#quote.down{background:#ffe0e0;color:#a71313;border-color:#d43b3b}#quote.stale{background:#fff1d7;color:#754600;border-color:#bd7b12}#price{font-size:25px}.meta{font-size:13px;opacity:.78}
+#markets{position:fixed;z-index:2147483647;top:14px;left:14px;direction:ltr;display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid #8da3b5;border-radius:8px;background:linear-gradient(#fff,#dbe5ec);box-shadow:0 3px 10px #0003;color:#17364b;font-weight:700}
+#markets label{font-size:12px;white-space:nowrap}#marketSelect{width:168px;height:34px;padding:3px 28px 3px 8px;border:1px solid #8298aa;border-radius:4px;background:#fff;color:#084e91;font:700 14px Arial;cursor:pointer}#markets.waiting{border-color:#c68416;background:#fff1d7}
+@media(max-width:700px){#quote{min-width:0;width:calc(100% - 52px);gap:9px;padding:10px 14px}#price{font-size:20px}}
+</style>
+<style id="kawkabat-live-analysis-style-v1">
+#kawkabatLiveAnalysisPanel{
+  position:fixed;z-index:2147483646;top:150px;right:18px;width:286px;
+  direction:rtl;background:rgba(10,28,52,.96);color:#f4f7fb;
+  border:1px solid #2b6c9f;border-radius:12px;box-shadow:0 10px 28px #0006;
+  font-family:Arial,Tahoma,sans-serif;overflow:hidden;backdrop-filter:blur(5px)
+}
+#kawkabatLiveAnalysisPanel[hidden]{display:none!important}
+#kawkabatLiveAnalysisPanel .ka-head{
+  display:flex;align-items:center;justify-content:space-between;padding:11px 13px;
+  background:linear-gradient(180deg,#173f68,#102d4c);border-bottom:1px solid #285a82;
+  font-weight:900;font-size:17px
+}
+#kawkabatLiveAnalysisPanel .ka-head-left{display:flex;align-items:center;gap:8px}
+#kawkabatLiveAnalysisPanel .ka-live-dot{
+  width:9px;height:9px;border-radius:50%;background:#51c85a;box-shadow:0 0 8px #51c85a
+}
+#kawkabatLiveAnalysisPanel .ka-close{
+  border:0;background:transparent;color:#fff;font-size:22px;font-weight:900;cursor:pointer;
+  width:30px;height:30px;line-height:26px;border-radius:5px
+}
+#kawkabatLiveAnalysisPanel .ka-close:hover{background:#ffffff18}
+#kawkabatLiveAnalysisPanel .ka-current{
+  margin:12px;border:1px solid #846a42;border-radius:8px;padding:11px;text-align:center;background:#0c2037
+}
+#kawkabatLiveAnalysisPanel .ka-small{font-size:12px;color:#b7c7d9}
+#kawkabatLiveAnalysisPanel .ka-price{font:900 27px Arial;color:#fff;margin:4px 0;direction:ltr}
+#kawkabatLiveAnalysisPanel .ka-direction{font-weight:900;letter-spacing:.5px;direction:ltr}
+#kawkabatLiveAnalysisPanel .ka-grid{padding:0 12px 8px}
+#kawkabatLiveAnalysisPanel .ka-row{
+  display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+  padding:9px 3px;border-bottom:1px solid #ffffff16
+}
+#kawkabatLiveAnalysisPanel .ka-row:last-child{border-bottom:0}
+#kawkabatLiveAnalysisPanel .ka-label{font-size:13px;font-weight:700}
+#kawkabatLiveAnalysisPanel .ka-val{font:800 16px Arial;direction:ltr}
+#kawkabatLiveAnalysisPanel .ka-sub{display:block;font:700 11px Arial;opacity:.82;margin-top:3px;direction:ltr}
+#kawkabatLiveAnalysisPanel .ka-res{color:#54c65f}
+#kawkabatLiveAnalysisPanel .ka-sup{color:#ff5555}
+#kawkabatLiveAnalysisPanel .ka-main{color:#ffc93d}
+#kawkabatLiveAnalysisPanel .ka-fib{color:#bd7cff}
+#kawkabatLiveAnalysisPanel .ka-confluence{
+  margin:5px 12px 12px;padding:10px;border:1px solid #8f45cf;border-radius:8px;
+  background:linear-gradient(135deg,#351451aa,#161f48aa);text-align:center
+}
+#kawkabatLiveAnalysisPanel .ka-confluence strong{color:#ffd64a}
+#kawkabatLiveAnalysisPanel .ka-foot{
+  padding:8px 12px;background:#081a2d;color:#9db2c7;font-size:11px;display:flex;
+  justify-content:space-between;gap:8px;direction:ltr
+}
+#kawkabatAnalysisFallbackBtn{
+  position:fixed;z-index:2147483647;top:66px;right:190px;width:36px;height:32px;
+  border:1px solid #95a2ac;border-radius:4px;background:linear-gradient(#fff,#d9e3ea);
+  cursor:pointer;font-size:18px;display:none;align-items:center;justify-content:center
+}
+#kawkabatAnalysisFallbackBtn[data-active="true"]{
+  outline:2px solid #8a2be2;box-shadow:0 0 7px #8a2be2;background:#f2e7ff
+}
+@media(max-width:900px){
+  #kawkabatLiveAnalysisPanel{right:8px;top:135px;width:255px}
+}
+</style>
+
+
+
+
+
+
+<style id="kawkabat-quote-direct-under-toolbar-v7">
+/* V7: live counter directly under the bottom edge of the top toolbar */
+#quote{
+  position:fixed !important;
+  top:48px !important;
+  right:6px !important;
+  left:auto !important;
+  bottom:auto !important;
+  margin:0 !important;
+  width:480px !important;
+  min-width:480px !important;
+  max-width:480px !important;
+  padding:8px 14px !important;
+  gap:12px !important;
+  transform:none !important;
+  transform-origin:top right !important;
+  pointer-events:none !important;
+  z-index:2147483647 !important;
+  border-radius:18px !important;
+  box-shadow:0 3px 10px rgba(0,0,0,.18) !important;
+}
+#quote #symbol{font-size:18px !important}
+#quote #price{font-size:26px !important}
+#quote #arrow{font-size:18px !important}
+#quote #state{font-size:16px !important}
+#quote .meta{font-size:12px !important}
+</style>
+
+
+<script id="kawkabat-quote-direct-under-toolbar-script-v7">
+(function(){
+  function pinQuote(){
+    var q=document.getElementById('quote');
+    if(!q)return;
+    function set(n,v){q.style.setProperty(n,v,'important');}
+    set('position','fixed');
+    set('top','48px');
+    set('right','6px');
+    set('left','auto');
+    set('bottom','auto');
+    set('margin','0');
+    set('width','480px');
+    set('min-width','480px');
+    set('max-width','480px');
+    set('padding','8px 14px');
+    set('gap','12px');
+    set('transform','none');
+    set('transform-origin','top right');
+    set('pointer-events','none');
+    set('z-index','2147483647');
+    set('border-radius','18px');
+    set('box-shadow','0 3px 10px rgba(0,0,0,.18)');
+  }
+  document.addEventListener('DOMContentLoaded',pinQuote);
+  window.addEventListener('load',pinQuote);
+  setInterval(pinQuote,300);
+})();
+</script>
+
+
+<style id="kawkabat-v9-preserve-all">
+/* V9: Preserve ALL existing controls and behavior.
+   Only keep the analysis panel aligned right and make page scrollbars visible. */
+#kawkabatLiveAnalysisPanel{
+  right:12px !important;
+  left:auto !important;
+}
+</style>
+
+</head><body>
+
+<button id="kawkabatAnalysisFallbackBtn" type="button" title="التحليل الحي" aria-label="التحليل الحي">📊</button>
+<aside id="kawkabatLiveAnalysisPanel" hidden aria-label="التحليل الحي">
+  <div class="ka-head">
+    <div class="ka-head-left"><span class="ka-live-dot"></span><span>التحليل الحي 📊</span></div>
+    <button class="ka-close" id="kawkabatLiveAnalysisClose" type="button" title="إخفاء">×</button>
+  </div>
+  <div class="ka-current">
+    <div class="ka-small">السعر الحالي</div>
+    <div class="ka-price" id="kaCurrentPrice">--.--</div>
+    <div class="ka-direction" id="kaDirection">WAITING</div>
+  </div>
+  <div class="ka-grid">
+    <div class="ka-row ka-res">
+      <div class="ka-label">أقرب مقاومة</div>
+      <div class="ka-val"><span id="kaResistance">--.--</span><span class="ka-sub" id="kaResistanceDist">--</span></div>
+    </div>
+    <div class="ka-row ka-sup">
+      <div class="ka-label">أقرب دعم</div>
+      <div class="ka-val"><span id="kaSupport">--.--</span><span class="ka-sub" id="kaSupportDist">--</span></div>
+    </div>
+    <div class="ka-row ka-main">
+      <div class="ka-label">المستوى الرئيسي</div>
+      <div class="ka-val"><span id="kaMain">--.--</span><span class="ka-sub" id="kaMainDist">--</span></div>
+    </div>
+    <div class="ka-row ka-fib">
+      <div class="ka-label">أقرب فيبوناتشي</div>
+      <div class="ka-val"><span id="kaFib">--.--</span><span class="ka-sub" id="kaFibRatio">--</span></div>
+    </div>
+  </div>
+  <div class="ka-confluence" id="kaConfluence">
+    <div class="ka-small">منطقة التلاقي</div>
+    <strong id="kaConfluenceValue">لا يوجد تطابق قوي بعد</strong>
+  </div>
+  <div class="ka-foot">
+    <span id="kaRange">H -- / L --</span>
+    <span>MAGIC 672 = 6.72</span>
+  </div>
+</aside>
+
+<iframe id="wheel" title="كوكبة الأرقام السحرية V481" src="/wheel.html"></iframe>
+<div id="markets"><label for="marketSelect">MARKET</label><select id="marketSelect" title="AmiBroker Markets"><option value="AUTO">AUTO — AmiBroker</option><option>XAUUSD</option><option>XAG_CBOE</option><option>XAUUSD</option><option>XAUUSD_D</option><option>XB_AMEX</option><option>XBAP_CBOE</option><option>XBB_AMEX</option><option>XBIL_AMEX</option><option>XBIL_NASDAQ</option><option>XBIO_NASDAQ</option><option>XBIT_NASDAQ</option><option>XBJA_CBOE</option><option>XBJL_CBOE</option><option>BTCUSD</option><option>US30</option><option>SPX</option><option>TSLA</option><option>1010</option></select></div>
+<div id="quote" class="stale" role="status" aria-live="polite"><span id="symbol">XAUUSD</span><span id="price">--.--</span><span id="arrow">•</span><span id="state">CONNECTING</span><span class="meta" id="latency">-- ms</span></div>
+<script>(function(){"use strict";var box=document.getElementById("quote"),price=document.getElementById("price"),arrow=document.getElementById("arrow"),state=document.getElementById("state"),latency=document.getElementById("latency"),symbol=document.getElementById("symbol"),markets=document.getElementById("markets"),marketSelect=document.getElementById("marketSelect"),lastSuccess=0,busy=false,selectedMarket=localStorage.getItem("kawkabatMarket")||"AUTO";
+if([].some.call(marketSelect.options,function(o){return o.value===selectedMarket}))marketSelect.value=selectedMarket;else selectedMarket="AUTO";
+marketSelect.addEventListener("change",function(){selectedMarket=this.value;localStorage.setItem("kawkabatMarket",selectedMarket);poll()});
+function show(data,started){var now=Date.now(),liveSymbol=String(data.symbol||"XAUUSD").toUpperCase(),d=String(data.direction||"FLAT").toUpperCase();if(selectedMarket!=="AUTO"&&selectedMarket.toUpperCase()!==liveSymbol){markets.className="waiting";box.className="stale";symbol.textContent=selectedMarket;price.textContent="--.--";arrow.textContent="•";state.textContent="OPEN IN AMIBROKER";latency.textContent=liveSymbol+" LIVE";return}markets.className="";lastSuccess=now;if(selectedMarket==="AUTO"){var exists=[].some.call(marketSelect.options,function(o){return o.value===liveSymbol});if(exists)marketSelect.value=liveSymbol}symbol.textContent=liveSymbol;price.textContent=Number(data.price).toFixed(2);arrow.textContent=d==="UP"?"▲":d==="DOWN"?"▼":"•";box.className=d==="UP"?"up":d==="DOWN"?"down":"";state.textContent=d==="UP"?"LIVE UP":d==="DOWN"?"LIVE DOWN":"LIVE";latency.textContent=(Number.isFinite(Number(data.sourceAgeMs))?Math.max(0,Number(data.sourceAgeMs)):Math.max(0,now-started))+" ms";try{window.__kawkabatApplyLiveQuote&&window.__kawkabatApplyLiveQuote(data)}catch(e){}}
+async function poll(){if(busy)return;busy=true;var started=Date.now(),c=new AbortController(),timer=setTimeout(function(){c.abort()},800);try{var r=await fetch("/api/quote?ts="+started,{cache:"no-store",signal:c.signal}),data=await r.json();if(!r.ok||!data.ok||!Number.isFinite(Number(data.price)))throw new Error();show(data,started)}catch(e){if(Date.now()-lastSuccess>1500){box.className="stale";arrow.textContent="•";state.textContent="AMIBROKER OFFLINE";latency.textContent="-- ms"}}finally{clearTimeout(timer);busy=false}}poll();setInterval(poll,100)}());</script>
+
+<script id="kawkabat-amibroker-wheel-link-v2">
+(function(){
+"use strict";
+var host=document.getElementById("wheel");
+var liveAnchor=null,anchorSymbol="",anchorSetAt=0,lastCellInteger=null;
+var NS="http://www.w3.org/2000/svg",CX=2200,CY=1800,INNER=400,OUTER=1500,DIVISIONS=36;
+function visit(doc,callback,depth){
+  if(!doc||depth>700)return null;
+  var result=null;try{result=callback(doc);}catch(e){}
+  if(result)return result;
+  var frames=[];try{frames=doc.querySelectorAll("iframe");}catch(e){return null;}
+  for(var i=0;i<frames.length;i++){
+    try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(e){}
+  }
+  return null;
+}
+function root(){try{return host&&host.contentDocument;}catch(e){return null;}}
+function controlDoc(){var r=root();return r&&visit(r,function(doc){return doc.querySelector('input[aria-label="Value"]')?doc:null;},0);}
+function wheelDoc(){var r=root();return r&&visit(r,function(doc){return doc.getElementById("wheel")&&doc.querySelector(".approved-cycle-number")?doc:null;},0);}
+function nativeSet(input,value){
+  if(!input)return false;
+  var win=input.ownerDocument.defaultView;
+  try{var d=Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype,"value");if(d&&d.set)d.set.call(input,String(value));else input.value=String(value);}catch(e){input.value=String(value);}
+  ["input","change","keyup"].forEach(function(type){try{input.dispatchEvent(new win.Event(type,{bubbles:true}));}catch(e){}});
+  return true;
+}
+function ensureLiveValueOverlay(price,symbol){
+  var doc=controlDoc(),input=doc&&doc.querySelector('input[aria-label="Value"]');if(!input)return false;
+  var wrap=input.parentElement;if(!wrap)return false;
+  try{wrap.style.setProperty("position","relative","important");}catch(e){}
+  var overlay=doc.getElementById("kawkabatLiveWheelValueOverlay");
+  if(!overlay){
+    overlay=doc.createElement("span");overlay.id="kawkabatLiveWheelValueOverlay";
+    overlay.style.cssText="position:absolute;left:3px;right:31px;top:2px;bottom:2px;display:flex;align-items:center;justify-content:flex-start;padding:0 10px;box-sizing:border-box;background:linear-gradient(#fdfefe,#dce5eb);border-radius:3px;color:#111;font:700 18px Arial,Tahoma,sans-serif;direction:ltr;pointer-events:none;z-index:20;white-space:nowrap;overflow:hidden";
+    wrap.appendChild(overlay);
+  }
+  overlay.textContent=Number(price).toFixed(2);
+  overlay.title=(symbol||"AmiBroker")+" live price";
+  overlay.dataset.symbol=String(symbol||"");overlay.dataset.livePrice=String(price);
+  return true;
+}
+function setAnchor(integerValue,symbol){
+  var doc=controlDoc(),input=doc&&doc.querySelector('input[aria-label="Value"]');if(!input)return false;
+  liveAnchor=integerValue;anchorSymbol=String(symbol||"").toUpperCase();anchorSetAt=Date.now();
+  nativeSet(input,String(integerValue));
+  return true;
+}
+function numberFromNode(node){
+  var values=[node.getAttribute("data-v131-display-value"),node.getAttribute("data-value"),node.getAttribute("data-tick")];
+  var primary=node.querySelector&&node.querySelector('tspan[data-v131-number-role="primary"]');if(primary)values.push(primary.textContent);values.push(node.textContent);
+  for(var i=0;i<values.length;i++){var n=Number(String(values[i]==null?"":values[i]).replace(/,/g,"").trim());if(Number.isFinite(n))return n;}
+  return null;
+}
+function findCell(doc,target){
+  var nodes=doc.querySelectorAll(".approved-cycle-number");
+  for(var i=0;i<nodes.length;i++){var n=numberFromNode(nodes[i]);if(n!==null&&Math.abs(n-target)<1e-7)return nodes[i];}
+  return null;
+}
+function point(radius,degree){var radians=degree*Math.PI/180;return{x:CX+Math.cos(radians)*radius,y:CY+Math.sin(radians)*radius};}
+function cellPath(innerRadius,outerRadius,centerDegree){
+  var half=180/DIVISIONS,start=centerDegree-half,end=centerDegree+half;
+  var a=point(innerRadius,start),b=point(outerRadius,start),c=point(outerRadius,end),d=point(innerRadius,end);
+  return ["M",a.x.toFixed(3),a.y.toFixed(3),"L",b.x.toFixed(3),b.y.toFixed(3),"A",outerRadius.toFixed(3),outerRadius.toFixed(3),"0 0 1",c.x.toFixed(3),c.y.toFixed(3),"L",d.x.toFixed(3),d.y.toFixed(3),"A",innerRadius.toFixed(3),innerRadius.toFixed(3),"0 0 0",a.x.toFixed(3),a.y.toFixed(3),"Z"].join(" ");
+}
+function clearLivePaint(doc){
+  ["kawkabatAmiBrokerLiveCell","kawkabatAmiBrokerLivePriceText"].forEach(function(id){var n=doc.getElementById(id);if(n)n.remove();});
+  var old=doc.querySelectorAll('[data-kawkabat-live-cell="true"]');for(var i=0;i<old.length;i++)old[i].removeAttribute("data-kawkabat-live-cell");
+}
+function paint(price,direction,symbol,attempt){
+  var doc=wheelDoc();if(!doc)return false;
+  var integerValue=Math.floor(Number(price));if(!Number.isFinite(integerValue))return false;
+  var node=findCell(doc,integerValue);
+  if(!node){
+    if((attempt||0)<2){setAnchor(integerValue,symbol);setTimeout(function(){paint(price,direction,symbol,(attempt||0)+1);},1100);}
+    return false;
+  }
+  var x=Number(node.getAttribute("x")),y=Number(node.getAttribute("y"));if(!Number.isFinite(x)||!Number.isFinite(y))return false;
+  clearLivePaint(doc);
+  var radius=Math.sqrt(Math.pow(x-CX,2)+Math.pow(y-CY,2));
+  var total=Math.max(1,Number(doc.documentElement.dataset.v360TotalNumericRings||doc.documentElement.dataset.layoutSize||11));
+  var width=(OUTER-INNER)/total,inner=Math.max(INNER,radius-width/2),outer=Math.min(OUTER,radius+width/2);
+  var centerDegree=Math.atan2(y-CY,x-CX)*180/Math.PI;
+  var d=String(direction||"FLAT").toUpperCase();var fill=d==="UP"?"#16a34a":d==="DOWN"?"#dc2626":"#d99b18";
+  var svg=doc.getElementById("wheel"),fills=doc.getElementById("specialFills")||svg;
+  var group=doc.createElementNS(NS,"g");group.id="kawkabatAmiBrokerLiveCell";group.setAttribute("pointer-events","none");group.setAttribute("data-symbol",String(symbol||""));group.setAttribute("data-price",String(price));
+  var path=doc.createElementNS(NS,"path");path.setAttribute("d",cellPath(inner,outer,centerDegree));path.setAttribute("fill",fill);path.setAttribute("fill-opacity","0.78");path.setAttribute("stroke",fill);path.setAttribute("stroke-width","5");path.setAttribute("vector-effect","non-scaling-stroke");group.appendChild(path);fills.appendChild(group);
+  node.setAttribute("data-kawkabat-live-cell","true");
+  var text=doc.createElementNS(NS,"text");text.id="kawkabatAmiBrokerLivePriceText";text.setAttribute("x",x);text.setAttribute("y",y);text.setAttribute("text-anchor","middle");text.setAttribute("dominant-baseline","middle");text.setAttribute("direction","ltr");text.setAttribute("pointer-events","none");text.setAttribute("fill","#ffffff");text.setAttribute("stroke","#111111");text.setAttribute("stroke-width","2.3");text.setAttribute("paint-order","stroke fill");text.setAttribute("font-family","Arial,Tahoma,sans-serif");text.setAttribute("font-size","20");text.setAttribute("font-weight","900");text.textContent=Number(price).toFixed(2);svg.appendChild(text);
+  lastCellInteger=integerValue;
+  doc.documentElement.dataset.amibrokerLive="true";doc.documentElement.dataset.amibrokerSymbol=String(symbol||"");doc.documentElement.dataset.amibrokerPrice=Number(price).toFixed(2);doc.documentElement.dataset.amibrokerDirection=d;doc.documentElement.dataset.amibrokerCell=String(integerValue);doc.documentElement.dataset.amibrokerAnchor=String(liveAnchor);
+  return true;
+}
+function apply(data){
+  if(!data||!Number.isFinite(Number(data.price)))return false;
+  var price=Number(data.price),symbol=String(data.symbol||"").toUpperCase(),direction=String(data.direction||"FLAT").toUpperCase(),integerValue=Math.floor(price);
+  if(liveAnchor===null||anchorSymbol!==symbol){setAnchor(integerValue,symbol);}
+  ensureLiveValueOverlay(price,symbol);
+  if(Date.now()-anchorSetAt<1150){setTimeout(function(){try{ensureLiveValueOverlay(price,symbol);paint(price,direction,symbol,0);}catch(e){}},1200);return true;}
+  if(!paint(price,direction,symbol,0))return true;
+  return true;
+}
+window.__kawkabatApplyLiveQuote=apply;
+window.__auditKawkabatAmiBrokerWheelLink=function(){return{installed:true,anchor:liveAnchor,symbol:anchorSymbol,lastCell:lastCellInteger,anchorAgeMs:anchorSetAt?Date.now()-anchorSetAt:null,exactPriceOverlay:true,greenUpRedDown:true,fixedGridBetweenRangeEscapes:true};};
+host&&host.addEventListener("load",function(){liveAnchor=null;anchorSymbol="";anchorSetAt=0;});
+}());
+</script>
+
+
+<script id="kawkabat-panel-default-open-v1">
+(function(){
+  'use strict';
+  var host=document.getElementById('wheel');
+  try{
+    localStorage.setItem('tasi-gannzilla-panel-visible-v66','true');
+    localStorage.setItem('tasi-gannzilla-panel-visible-v67','true');
+  }catch(e){}
+
+  function visit(doc,callback,depth){
+    if(!doc||depth>700)return;
+    try{callback(doc);}catch(e){}
+    var frames=[];
+    try{frames=doc.querySelectorAll('iframe');}catch(e){return;}
+    for(var i=0;i<frames.length;i++){
+      try{visit(frames[i].contentDocument,callback,depth+1);}catch(e){}
+    }
+  }
+
+  function clearHiddenInline(node){
+    if(!node)return;
+    ['display','visibility','pointer-events','width','min-width','max-width','overflow'].forEach(function(name){
+      try{node.style.removeProperty(name);}catch(e){}
+    });
+    try{node.removeAttribute('aria-hidden');}catch(e){}
+  }
+
+  function forcePanelOpen(){
+    var root=null;
+    try{root=host&&host.contentDocument;}catch(e){}
+    if(!root)return false;
+    var found=false;
+    visit(root,function(doc){
+      try{
+        if(doc.body&&doc.body.classList.contains('v85-panel-hidden'))doc.body.classList.remove('v85-panel-hidden');
+        var button=doc.getElementById('v66PanelBtn')||doc.getElementById('v65PanelToggleBtn');
+        if(button){
+          found=true;
+          if(button.dataset.hidden==='true'&&button.dataset.v67Bound==='true'){
+            button.click();
+          }
+          button.dataset.hidden='false';
+          button.title='إخفاء لوحة المخطط / Hide chart panel';
+          button.setAttribute('aria-label',button.title);
+          button.style.setProperty('pointer-events','auto','important');
+          button.style.setProperty('cursor','pointer','important');
+        }
+        var panel=doc.querySelector('.control-panel');
+        if(panel){found=true;clearHiddenInline(panel);}
+        var pageScrollbar=doc.querySelector('.page-scrollbar');
+        if(pageScrollbar){
+          found=true;
+          clearHiddenInline(pageScrollbar);
+          pageScrollbar.style.setProperty('visibility','visible','important');
+          pageScrollbar.style.setProperty('pointer-events','auto','important');
+        }
+      }catch(e){}
+    },0);
+    return found;
+  }
+
+  if(host)host.addEventListener('load',function(){setTimeout(forcePanelOpen,250);setTimeout(forcePanelOpen,900);setTimeout(forcePanelOpen,1800);});
+  setInterval(forcePanelOpen,700);
+  window.__ensureKawkabatPanelOpen=forcePanelOpen;
+}());
+</script>
+
+
+<script id="kawkabat-live-analysis-engine-v1">
+(function(){
+"use strict";
+
+var host=document.getElementById("wheel");
+var panel=document.getElementById("kawkabatLiveAnalysisPanel");
+var closeBtn=document.getElementById("kawkabatLiveAnalysisClose");
+var fallbackBtn=document.getElementById("kawkabatAnalysisFallbackBtn");
+var visible=(localStorage.getItem("kawkabat-live-analysis-visible")||"true")!=="false";
+var MAGIC=672, STEP=MAGIC/100;
+var stateBySymbol={};
+var lastAnalysis=null, toolbarButton=null;
+
+var $=function(id){return document.getElementById(id);};
+var el={
+ price:$("kaCurrentPrice"),direction:$("kaDirection"),
+ resistance:$("kaResistance"),resistanceDist:$("kaResistanceDist"),
+ support:$("kaSupport"),supportDist:$("kaSupportDist"),
+ main:$("kaMain"),mainDist:$("kaMainDist"),
+ fib:$("kaFib"),fibRatio:$("kaFibRatio"),
+ confluence:$("kaConfluenceValue"),range:$("kaRange")
+};
+
+function fmt(v){return Number.isFinite(Number(v))?Number(v).toFixed(2):"--.--";}
+function signed(v){if(!Number.isFinite(Number(v)))return"--";v=Number(v);return(v>=0?"+":"")+v.toFixed(2);}
+function visit(doc,callback,depth){
+  if(!doc||depth>700)return null;
+  var r=null;try{r=callback(doc);}catch(e){}
+  if(r)return r;
+  var frames=[];try{frames=doc.querySelectorAll("iframe");}catch(e){return null;}
+  for(var i=0;i<frames.length;i++){
+    try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(e){}
+  }
+  return null;
+}
+function root(){try{return host&&host.contentDocument;}catch(e){return null;}}
+function wheelDoc(){
+  var r=root();return r&&visit(r,function(doc){
+    return doc.getElementById("wheel")&&doc.querySelector(".approved-cycle-number")?doc:null;
+  },0);
+}
+function numberFromNode(node){
+  var vals=[node.getAttribute("data-v131-display-value"),node.getAttribute("data-value"),node.getAttribute("data-tick")];
+  var primary=node.querySelector&&node.querySelector('tspan[data-v131-number-role="primary"]');
+  if(primary)vals.push(primary.textContent);
+  vals.push(node.textContent);
+  for(var i=0;i<vals.length;i++){
+    var n=Number(String(vals[i]==null?"":vals[i]).replace(/,/g,"").trim());
+    if(Number.isFinite(n))return n;
+  }
+  return null;
+}
+function findCell(doc,target){
+  var nodes=doc.querySelectorAll(".approved-cycle-number"),best=null,bestDiff=Infinity;
+  for(var i=0;i<nodes.length;i++){
+    var n=numberFromNode(nodes[i]);if(n===null)continue;
+    var diff=Math.abs(n-target);
+    if(diff<bestDiff){bestDiff=diff;best=nodes[i];}
+    if(diff<1e-7)return nodes[i];
+  }
+  return bestDiff<=1.01?best:null;
+}
+function setVisible(next){
+  visible=!!next;
+  panel.hidden=!visible;
+  try{localStorage.setItem("kawkabat-live-analysis-visible",visible?"true":"false");}catch(e){}
+  syncButton();
+  if(visible&&lastAnalysis)paintAnalysis(lastAnalysis);
+  if(!visible)clearAnalysisPaint();
+}
+function syncButton(){
+  if(toolbarButton){
+    toolbarButton.dataset.active=visible?"true":"false";
+    toolbarButton.setAttribute("aria-pressed",String(visible));
+    toolbarButton.title=visible?"إخفاء التحليل الحي":"إظهار التحليل الحي";
+    toolbarButton.style.setProperty("outline","none","important");
+    toolbarButton.style.setProperty("box-shadow","none","important");
+  }
+  fallbackBtn.dataset.active=visible?"true":"false";
+}
+function installToolbarButton(){
+  var r=root();if(!r)return false;
+  var info=visit(r,function(doc){
+    var pencil=doc.getElementById("v64PencilBtn");
+    if(pencil&&pencil.parentNode)return{doc:doc,anchor:pencil};
+    var eye=doc.getElementById("v66WheelBtn");
+    if(eye&&eye.parentNode)return{doc:doc,anchor:eye};
+    return null;
+  },0);
+  if(!info)return false;
+  var doc=info.doc,anchor=info.anchor;
+  var btn=doc.getElementById("kawkabatLiveAnalysisToolbarBtn");
+  if(!btn){
+    btn=anchor.cloneNode(false);
+    btn.id="kawkabatLiveAnalysisToolbarBtn";
+    btn.type="button";btn.removeAttribute("onclick");
+    btn.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="4" y="13" width="3.5" height="7" rx="1" fill="#17a34a"/><rect x="10.25" y="9" width="3.5" height="11" rx="1" fill="#e6ad22"/><rect x="16.5" y="5" width="3.5" height="15" rx="1" fill="#7c5ce6"/><path d="M4 6.5h16" stroke="#315a78" stroke-width="1.2" stroke-linecap="round"/></svg>';
+    btn.setAttribute("aria-label","التحليل الحي");
+    btn.style.setProperty("cursor","pointer","important");
+    btn.style.removeProperty("width");btn.style.removeProperty("min-width");btn.style.removeProperty("max-width");
+    btn.style.removeProperty("height");btn.style.removeProperty("min-height");btn.style.removeProperty("max-height");
+    btn.style.removeProperty("margin");btn.style.removeProperty("transform");
+    btn.addEventListener("click",function(e){e.preventDefault();e.stopPropagation();setVisible(!visible);});
+    anchor.parentNode.insertBefore(btn,anchor);
+  }
+  toolbarButton=btn;
+  fallbackBtn.style.display="none";
+  syncButton();
+  return true;
+}
+function ensureButton(){
+  if(!installToolbarButton()){
+    fallbackBtn.style.display="flex";
+    syncButton();
+  }
+}
+function getSymbolState(symbol,price,data){
+  symbol=String(symbol||"SYMBOL").toUpperCase();
+  var s=stateBySymbol[symbol];
+  if(!s){
+    s=stateBySymbol[symbol]={anchor:price,high:price,low:price,startedAt:Date.now()};
+  }
+  if(Number.isFinite(Number(data&&data.high)))s.high=Number(data.high); else s.high=Math.max(s.high,price);
+  if(Number.isFinite(Number(data&&data.low)))s.low=Number(data.low); else s.low=Math.min(s.low,price);
+  return s;
+}
+function nextResistance(price,anchor){
+  var k=Math.floor((price-anchor)/STEP)+1;
+  var level=anchor+k*STEP;
+  if(level<=price+0.004)level+=STEP;
+  return level;
+}
+function nextSupport(price,anchor){
+  var k=Math.ceil((price-anchor)/STEP)-1;
+  var level=anchor+k*STEP;
+  if(level>=price-0.004)level-=STEP;
+  return level;
+}
+function nearestFib(price,high,low){
+  if(!(Number.isFinite(high)&&Number.isFinite(low))||high-low<0.02)return null;
+  var ratios=[23.6,38.2,50,61.8,78.6],range=high-low,best=null;
+  ratios.forEach(function(r){
+    var value=low+range*(r/100),diff=Math.abs(value-price);
+    if(!best||diff<best.diff)best={value:value,ratio:r,diff:diff};
+  });
+  return best;
+}
+function analyze(data){
+  var price=Number(data.price),symbol=String(data.symbol||"SYMBOL").toUpperCase();
+  if(!Number.isFinite(price))return null;
+  var s=getSymbolState(symbol,price,data);
+  var resistance=nextResistance(price,s.anchor);
+  var support=nextSupport(price,s.anchor);
+  var main=s.anchor;
+  var fib=nearestFib(price,s.high,s.low);
+  var confluence=null,candidates=[
+    {name:"مقاومة",value:resistance},
+    {name:"دعم",value:support},
+    {name:"رئيسي",value:main}
+  ];
+  if(fib){
+    var threshold=Math.max(0.25,STEP*0.18),best=null;
+    candidates.forEach(function(c){
+      var d=Math.abs(c.value-fib.value);
+      if(d<=threshold&&(!best||d<best.d))best={d:d,a:c.value,b:fib.value,name:c.name};
+    });
+    if(best)confluence={from:Math.min(best.a,best.b),to:Math.max(best.a,best.b),name:best.name+" + Fib "+fib.ratio+"%"};
+  }
+  return{
+    symbol:symbol,price:price,direction:String(data.direction||"FLAT").toUpperCase(),
+    anchor:s.anchor,resistance:resistance,support:support,main:main,
+    fib:fib,high:s.high,low:s.low,confluence:confluence
+  };
+}
+function render(a){
+  if(!a)return;
+  el.price.textContent=fmt(a.price);
+  el.direction.textContent=a.direction==="UP"?"▲ LIVE UP":a.direction==="DOWN"?"▼ LIVE DOWN":"• LIVE";
+  el.direction.style.color=a.direction==="UP"?"#45d66c":a.direction==="DOWN"?"#ff5c5c":"#ffd052";
+  el.resistance.textContent=fmt(a.resistance);el.resistanceDist.textContent=signed(a.resistance-a.price);
+  el.support.textContent=fmt(a.support);el.supportDist.textContent=signed(a.support-a.price);
+  el.main.textContent=fmt(a.main);el.mainDist.textContent=signed(a.main-a.price);
+  if(a.fib){el.fib.textContent=fmt(a.fib.value);el.fibRatio.textContent="("+a.fib.ratio+"%) "+signed(a.fib.value-a.price);}
+  else{el.fib.textContent="--.--";el.fibRatio.textContent="بانتظار نطاق High/Low";}
+  el.range.textContent="H "+fmt(a.high)+" / L "+fmt(a.low);
+  el.confluence.textContent=a.confluence?fmt(a.confluence.from)+" – "+fmt(a.confluence.to)+"  ("+a.confluence.name+")":"لا يوجد تطابق قوي بعد";
+}
+function clearAnalysisPaint(){
+  var doc=wheelDoc();if(!doc)return;
+  var old=doc.getElementById("kawkabatLiveAnalysisOverlay");if(old)old.remove();
+}
+function paintAnalysis(a){
+  if(!visible||!a)return;
+  var doc=wheelDoc();if(!doc)return;
+  clearAnalysisPaint();
+  var svg=doc.getElementById("wheel");if(!svg)return;
+  var ns="http://www.w3.org/2000/svg";
+  var group=doc.createElementNS(ns,"g");group.id="kawkabatLiveAnalysisOverlay";group.setAttribute("pointer-events","none");
+  var specs=[
+    {key:"resistance",label:"R",color:"#22c55e"},
+    {key:"support",label:"S",color:"#ef4444"},
+    {key:"main",label:"M",color:"#f4b91f"}
+  ];
+  if(a.fib)specs.push({key:"fib",value:a.fib.value,label:"F",color:"#a855f7"});
+  specs.forEach(function(spec){
+    var value=spec.value!=null?spec.value:a[spec.key];
+    var target=Math.round(value),node=findCell(doc,target);if(!node)return;
+    var x=Number(node.getAttribute("x")),y=Number(node.getAttribute("y"));
+    if(!Number.isFinite(x)||!Number.isFinite(y))return;
+    var circle=doc.createElementNS(ns,"circle");
+    circle.setAttribute("cx",x);circle.setAttribute("cy",y);circle.setAttribute("r","27");
+    circle.setAttribute("fill",spec.color);circle.setAttribute("fill-opacity","0.14");
+    circle.setAttribute("stroke",spec.color);circle.setAttribute("stroke-width","5");
+    circle.setAttribute("vector-effect","non-scaling-stroke");
+    var tag=doc.createElementNS(ns,"text");
+    tag.setAttribute("x",x+24);tag.setAttribute("y",y-24);tag.setAttribute("text-anchor","middle");
+    tag.setAttribute("fill",spec.color);tag.setAttribute("stroke","#fff");tag.setAttribute("stroke-width","1.4");
+    tag.setAttribute("paint-order","stroke fill");tag.setAttribute("font-family","Arial");tag.setAttribute("font-size","17");
+    tag.setAttribute("font-weight","900");tag.textContent=spec.label;
+    group.appendChild(circle);group.appendChild(tag);
+  });
+  svg.appendChild(group);
+}
+function applyLiveAnalysis(data){
+  var a=analyze(data);if(!a)return;
+  lastAnalysis=a;render(a);if(visible)paintAnalysis(a);
+}
+var previousApply=window.__kawkabatApplyLiveQuote;
+window.__kawkabatApplyLiveQuote=function(data){
+  var result=true;
+  try{if(previousApply)result=previousApply(data);}catch(e){}
+  try{applyLiveAnalysis(data);}catch(e){}
+  return result;
+};
+closeBtn.addEventListener("click",function(){setVisible(false);});
+fallbackBtn.addEventListener("click",function(){setVisible(!visible);});
+host&&host.addEventListener("load",function(){
+  setTimeout(ensureButton,400);setTimeout(ensureButton,1200);setTimeout(ensureButton,2200);
+  if(lastAnalysis&&visible)setTimeout(function(){paintAnalysis(lastAnalysis);},1400);
+});
+setInterval(ensureButton,1200);
+panel.hidden=!visible;
+ensureButton();
+window.__auditKawkabatLiveAnalysis=function(){
+  return{
+    installed:true,visible:visible,magicFactor:MAGIC,step:STEP,
+    wheelGeometryChanged:false,overlayOnly:true,toolbarButton:!!toolbarButton,
+    current:lastAnalysis
+  };
+};
+}());
+</script>
+
+
+<script id="kawkabat-v9-preserve-all">
+(function(){
+  "use strict";
+  var host=document.getElementById("wheel");
+
+  function visit(doc,callback,depth){
+    if(!doc||depth>30)return;
+    try{callback(doc);}catch(e){}
+    var frames=[];
+    try{frames=doc.querySelectorAll("iframe");}catch(e){return;}
+    for(var i=0;i<frames.length;i++){
+      try{visit(frames[i].contentDocument,callback,depth+1);}catch(e){}
+    }
+  }
+
+  function preserveAndShowControls(){
+    var panel=document.getElementById("kawkabatLiveAnalysisPanel");
+    if(panel){
+      panel.style.setProperty("right","12px","important");
+      panel.style.setProperty("left","auto","important");
+      /* Do NOT alter hidden/display state, close button, toolbar button, or toggle behavior. */
+    }
+
+    var root=null;
+    try{root=host&&host.contentDocument;}catch(e){}
+    if(!root)return;
+
+    visit(root,function(doc){
+      try{
+        /* Keep all existing custom controls. Only make existing page scrollbars visible. */
+        var bars=doc.querySelectorAll(".page-scrollbar");
+        for(var i=0;i<bars.length;i++){
+          bars[i].style.setProperty("visibility","visible","important");
+          bars[i].style.setProperty("opacity","1","important");
+          bars[i].style.setProperty("pointer-events","auto","important");
+        }
+
+        /* Ensure native horizontal + vertical page scrolling remains available,
+           without deleting or hiding any control. */
+        if(doc.getElementById("wheel") && doc.querySelector(".approved-cycle-number")){
+          var s=doc.getElementById("kawkabatV9PageScrollbars");
+          if(!s){
+            s=doc.createElement("style");
+            s.id="kawkabatV9PageScrollbars";
+            s.textContent=
+              "html,body{overflow:scroll!important;scrollbar-gutter:stable!important;}"+
+              ".page-scrollbar{visibility:visible!important;opacity:1!important;pointer-events:auto!important;}";
+            (doc.head||doc.documentElement).appendChild(s);
+          }
+        }
+      }catch(e){}
+    },0);
+  }
+
+  if(host)host.addEventListener("load",function(){
+    setTimeout(preserveAndShowControls,250);
+    setTimeout(preserveAndShowControls,900);
+    setTimeout(preserveAndShowControls,1800);
+  });
+  document.addEventListener("DOMContentLoaded",preserveAndShowControls);
+  window.addEventListener("load",preserveAndShowControls);
+  setInterval(preserveAndShowControls,700);
+
+  window.__auditKawkabatV9=function(){
+    return{
+      preserveAllControls:true,
+      closeButtonPreserved:true,
+      toolbarTogglePreserved:true,
+      analysisPanelRightAligned:true,
+      horizontalVerticalScrollPreserved:true
+    };
+  };
+})();
+</script>
+
+
+<script id="kawkabat-analysis-clean-toolbar-audit-v14">
+(function(){
+  window.__auditKawkabatV14=function(){
+    var host=document.getElementById("wheel");
+    var out={cleanEngine:true,extraMoverScripts:false};
+    try{
+      function visit(doc){
+        if(!doc)return false;
+        var pencil=doc.getElementById("v64PencilBtn");
+        var btn=doc.getElementById("kawkabatLiveAnalysisToolbarBtn");
+        if(pencil&&btn){
+          var pr=pencil.getBoundingClientRect(),br=btn.getBoundingClientRect();
+          out.found=true;
+          out.sameHeight=Math.abs(pr.height-br.height)<1.5;
+          out.sameWidth=Math.abs(pr.width-br.width)<1.5;
+          out.leftOfPencil=br.right<=pr.left+3;
+          out.gapPx=Math.round((pr.left-br.right)*10)/10;
+          out.buttonWidth=Math.round(br.width*10)/10;
+          out.pencilWidth=Math.round(pr.width*10)/10;
+          out.buttonHeight=Math.round(br.height*10)/10;
+          out.pencilHeight=Math.round(pr.height*10)/10;
+          return true;
+        }
+        var frames=doc.querySelectorAll("iframe");
+        for(var i=0;i<frames.length;i++){
+          try{if(visit(frames[i].contentDocument))return true;}catch(e){}
+        }
+        return false;
+      }
+      visit(host&&host.contentDocument);
+    }catch(e){out.error=String(e);}
+    return out;
+  };
+})();
+</script>
+
+</body></html>

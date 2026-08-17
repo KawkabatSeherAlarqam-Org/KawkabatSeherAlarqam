@@ -1,0 +1,15 @@
+إصلاح فتح عجلة كوكبة الأرقام مع AmiBroker
+
+1. أغلق النافذة السوداء للخادم فقط.
+2. فك هذا الملف داخل:
+   C:\KawkabatSeherAlarqam
+3. وافق على استبدال الملفات الموجودة.
+4. شغّل START_AMIBROKER_WHEEL.cmd من جديد.
+5. افتح في Chrome:
+   http://127.0.0.1:8080/
+
+يستبدل الإصلاح ملفين فقط:
+- tools\amibroker-local-server.ps1
+- public\kawkabat-v481-amibroker-local.html
+
+لا يغلق AmiBroker، ويجب إبقاء معادلة AFL مطبقة.

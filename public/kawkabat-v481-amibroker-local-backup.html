@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>كوكبة الأرقام — AmiBroker محلي</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3;font-family:Arial,sans-serif}#wheel{position:absolute;inset:0;width:100%;height:100%;border:0}
+#quote{position:fixed;z-index:2147483647;top:14px;left:50%;transform:translateX(-50%);direction:ltr;display:flex;align-items:center;gap:16px;min-width:520px;padding:12px 20px;border:1px solid #bd7b12;border-radius:14px;background:#fff1d7;color:#754600;box-shadow:0 4px 14px #0003;font-weight:800}
+#quote.up{background:#d8ffe2;color:#087b2d;border-color:#20a94f}#quote.down{background:#ffe0e0;color:#a71313;border-color:#d43b3b}#quote.stale{background:#fff1d7;color:#754600;border-color:#bd7b12}#price{font-size:25px}.meta{font-size:13px;opacity:.78}
+@media(max-width:700px){#quote{min-width:0;width:calc(100% - 52px);gap:9px;padding:10px 14px}#price{font-size:20px}}
+</style></head><body>
+<iframe id="wheel" title="كوكبة الأرقام السحرية V481" src="/kawkabat-al-arqam-al-sihria-v481-rebuilt-wheel-zoom-controls.html"></iframe>
+<div id="quote" class="stale" role="status" aria-live="polite"><span id="symbol">XAUUSD</span><span id="price">--.--</span><span id="arrow">•</span><span id="state">CONNECTING</span><span class="meta" id="latency">-- ms</span></div>
+<script>(function(){"use strict";var box=document.getElementById("quote"),price=document.getElementById("price"),arrow=document.getElementById("arrow"),state=document.getElementById("state"),latency=document.getElementById("latency"),symbol=document.getElementById("symbol"),lastSuccess=0,busy=false;
+function show(data,started){var now=Date.now(),d=String(data.direction||"FLAT").toUpperCase();lastSuccess=now;symbol.textContent=data.symbol||"XAUUSD";price.textContent=Number(data.price).toFixed(2);arrow.textContent=d==="UP"?"▲":d==="DOWN"?"▼":"•";box.className=d==="UP"?"up":d==="DOWN"?"down":"";state.textContent=d==="UP"?"LIVE UP":d==="DOWN"?"LIVE DOWN":"LIVE";latency.textContent=Math.max(0,now-started)+" ms"}
+async function poll(){if(busy)return;busy=true;var started=Date.now(),c=new AbortController(),timer=setTimeout(function(){c.abort()},800);try{var r=await fetch("/api/quote?ts="+started,{cache:"no-store",signal:c.signal}),data=await r.json();if(!r.ok||!data.ok||!Number.isFinite(Number(data.price)))throw new Error();show(data,started)}catch(e){if(Date.now()-lastSuccess>1500){box.className="stale";arrow.textContent="•";state.textContent="AMIBROKER OFFLINE";latency.textContent="-- ms"}}finally{clearTimeout(timer);busy=false}}poll();setInterval(poll,100)}());</script>
+</body></html>

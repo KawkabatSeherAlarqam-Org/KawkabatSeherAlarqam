@@ -1,0 +1,98 @@
+// ============================================================
+// KAWKABAT / PHANTOM TRADER
+// AmiBroker REAL-TIME exporter - 100 ms target refresh
+// Source priority: GetRTData("Last") -> chart Close fallback
+// Output: C:\Kawkabat\ami_live.json
+// ============================================================
+
+_SECTION_BEGIN("KAWKABAT FAST REALTIME EXPORT 100MS");
+
+// Sub-second refresh requires EnableHiresRTR=1 in registry.
+// False = continue timer refresh when AmiBroker is minimised.
+RequestTimedRefresh( 0.1, False );
+
+symbol = Name();
+
+// Pull the freshest value directly from the streaming RT provider.
+price = GetRTData( "Last" );
+if( IsNull( price ) OR NOT IsFinite( price ) OR price <= 0 )
+{
+    price = LastValue( C );
+}
+
+// Previous exported RT value (not previous candle close).
+prevKey = "KAWKABAT_RT_PREV_" + symbol;
+prev = StaticVarGet( prevKey );
+
+if( IsNull( prev ) OR NOT IsFinite( prev ) OR prev <= 0 )
+{
+    prev = price;
+}
+
+direction = "FLAT";
+if( price > prev )
+{
+    direction = "UP";
+}
+else
+if( price < prev )
+{
+    direction = "DOWN";
+}
+
+// Optional RT fields for analysis.
+bid = GetRTData( "Bid" );
+ask = GetRTData( "Ask" );
+hi  = GetRTData( "High" );
+lo  = GetRTData( "Low" );
+
+if( IsNull( bid ) OR NOT IsFinite( bid ) ) bid = 0;
+if( IsNull( ask ) OR NOT IsFinite( ask ) ) ask = 0;
+if( IsNull( hi  ) OR NOT IsFinite( hi  ) ) hi  = 0;
+if( IsNull( lo  ) OR NOT IsFinite( lo  ) ) lo  = 0;
+
+// Monotonic sequence helps diagnose whether the file is being rewritten.
+seqKey = "KAWKABAT_RT_SEQ_" + symbol;
+seq = StaticVarGet( seqKey );
+if( IsNull( seq ) OR NOT IsFinite( seq ) ) seq = 0;
+seq = seq + 1;
+
+StaticVarSet( prevKey, price, False );
+StaticVarSet( seqKey, seq, False );
+
+// Keep JSON numeric fields as numbers, and direction as UP/DOWN/FLAT.
+json =
+    "{"
+    + "\"ok\":true,"
+    + "\"symbol\":\"" + symbol + "\","
+    + "\"price\":" + StrFormat( "%.8f", price ) + ","
+    + "\"previous\":" + StrFormat( "%.8f", prev ) + ","
+    + "\"direction\":\"" + direction + "\","
+    + "\"bid\":" + StrFormat( "%.8f", bid ) + ","
+    + "\"ask\":" + StrFormat( "%.8f", ask ) + ","
+    + "\"high\":" + StrFormat( "%.8f", hi ) + ","
+    + "\"low\":" + StrFormat( "%.8f", lo ) + ","
+    + "\"seq\":" + StrFormat( "%.0f", seq ) + ","
+    + "\"writer\":\"AMIBROKER_RT_100MS\""
+    + "}";
+
+filePath = "C:\\Kawkabat\\ami_live.json";
+
+// Rewrite the SAME file every timer cycle so its LastWriteTime stays fresh.
+// shared=False avoids the 250 ms sharing retry path documented for shared writes.
+fh = fopen( filePath, "w", False );
+if( fh )
+{
+    fputs( json, fh );
+    fclose( fh );
+}
+
+// Lightweight visual confirmation inside AmiBroker.
+Title =
+    "KAWKABAT RT EXPORT 100MS"
+    + " | " + symbol
+    + " | " + StrFormat( "%.5f", price )
+    + " | " + direction
+    + " | seq " + StrFormat( "%.0f", seq );
+
+_SECTION_END();

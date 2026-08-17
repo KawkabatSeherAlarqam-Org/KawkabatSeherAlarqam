@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>كوكبة الأرقام — AmiBroker محلي</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f7f1e3;font-family:Arial,sans-serif}#wheel{position:absolute;inset:0;width:100%;height:100%;border:0}
+#quote{position:fixed;z-index:2147483647;top:14px;left:50%;transform:translateX(-50%);direction:ltr;display:flex;align-items:center;gap:16px;min-width:520px;padding:12px 20px;border:1px solid #bd7b12;border-radius:14px;background:#fff1d7;color:#754600;box-shadow:0 4px 14px #0003;font-weight:800}
+#quote.up{background:#d8ffe2;color:#087b2d;border-color:#20a94f}#quote.down{background:#ffe0e0;color:#a71313;border-color:#d43b3b}#quote.stale{background:#fff1d7;color:#754600;border-color:#bd7b12}#price{font-size:25px}.meta{font-size:13px;opacity:.78}
+#markets{position:fixed;z-index:2147483647;top:14px;left:14px;direction:ltr;display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid #8da3b5;border-radius:8px;background:linear-gradient(#fff,#dbe5ec);box-shadow:0 3px 10px #0003;color:#17364b;font-weight:700}
+#markets label{font-size:12px;white-space:nowrap}#marketSelect{width:168px;height:34px;padding:3px 28px 3px 8px;border:1px solid #8298aa;border-radius:4px;background:#fff;color:#084e91;font:700 14px Arial;cursor:pointer}#markets.waiting{border-color:#c68416;background:#fff1d7}
+@media(max-width:700px){#quote{min-width:0;width:calc(100% - 52px);gap:9px;padding:10px 14px}#price{font-size:20px}}
+</style></head><body>
+<iframe id="wheel" title="كوكبة الأرقام السحرية V481" src="/wheel.html"></iframe>
+<div id="markets"><label for="marketSelect">MARKET</label><select id="marketSelect" title="AmiBroker Markets"><option value="AUTO">AUTO — AmiBroker</option><option>XAUUSD</option><option>XAG_CBOE</option><option>XAUUSD</option><option>XAUUSD_D</option><option>XB_AMEX</option><option>XBAP_CBOE</option><option>XBB_AMEX</option><option>XBIL_AMEX</option><option>XBIL_NASDAQ</option><option>XBIO_NASDAQ</option><option>XBIT_NASDAQ</option><option>XBJA_CBOE</option><option>XBJL_CBOE</option><option>BTCUSD</option><option>US30</option><option>SPX</option><option>TSLA</option><option>1010</option></select></div>
+<div id="quote" class="stale" role="status" aria-live="polite"><span id="symbol">XAUUSD</span><span id="price">--.--</span><span id="arrow">•</span><span id="state">CONNECTING</span><span class="meta" id="latency">-- ms</span></div>
+<script>(function(){"use strict";var box=document.getElementById("quote"),price=document.getElementById("price"),arrow=document.getElementById("arrow"),state=document.getElementById("state"),latency=document.getElementById("latency"),symbol=document.getElementById("symbol"),markets=document.getElementById("markets"),marketSelect=document.getElementById("marketSelect"),lastSuccess=0,busy=false,selectedMarket=localStorage.getItem("kawkabatMarket")||"AUTO";
+if([].some.call(marketSelect.options,function(o){return o.value===selectedMarket}))marketSelect.value=selectedMarket;else selectedMarket="AUTO";
+marketSelect.addEventListener("change",function(){selectedMarket=this.value;localStorage.setItem("kawkabatMarket",selectedMarket);poll()});
+function show(data,started){var now=Date.now(),liveSymbol=String(data.symbol||"XAUUSD").toUpperCase(),d=String(data.direction||"FLAT").toUpperCase();if(selectedMarket!=="AUTO"&&selectedMarket.toUpperCase()!==liveSymbol){markets.className="waiting";box.className="stale";symbol.textContent=selectedMarket;price.textContent="--.--";arrow.textContent="•";state.textContent="OPEN IN AMIBROKER";latency.textContent=liveSymbol+" LIVE";return}markets.className="";lastSuccess=now;if(selectedMarket==="AUTO"){var exists=[].some.call(marketSelect.options,function(o){return o.value===liveSymbol});if(exists)marketSelect.value=liveSymbol}symbol.textContent=liveSymbol;price.textContent=Number(data.price).toFixed(2);arrow.textContent=d==="UP"?"▲":d==="DOWN"?"▼":"•";box.className=d==="UP"?"up":d==="DOWN"?"down":"";state.textContent=d==="UP"?"LIVE UP":d==="DOWN"?"LIVE DOWN":"LIVE";latency.textContent=(Number.isFinite(Number(data.sourceAgeMs))?Math.max(0,Number(data.sourceAgeMs)):Math.max(0,now-started))+" ms";try{window.__kawkabatApplyLiveQuote&&window.__kawkabatApplyLiveQuote(data)}catch(e){}}
+async function poll(){if(busy)return;busy=true;var started=Date.now(),c=new AbortController(),timer=setTimeout(function(){c.abort()},800);try{var r=await fetch("/api/quote?ts="+started,{cache:"no-store",signal:c.signal}),data=await r.json();if(!r.ok||!data.ok||!Number.isFinite(Number(data.price)))throw new Error();show(data,started)}catch(e){if(Date.now()-lastSuccess>1500){box.className="stale";arrow.textContent="•";state.textContent="AMIBROKER OFFLINE";latency.textContent="-- ms"}}finally{clearTimeout(timer);busy=false}}poll();setInterval(poll,100)}());</script>
+
+<script id="kawkabat-amibroker-wheel-link-v2">
+(function(){
+"use strict";
+var host=document.getElementById("wheel");
+var liveAnchor=null,anchorSymbol="",anchorSetAt=0,lastCellInteger=null;
+var NS="http://www.w3.org/2000/svg",CX=2200,CY=1800,INNER=400,OUTER=1500,DIVISIONS=36;
+function visit(doc,callback,depth){
+  if(!doc||depth>700)return null;
+  var result=null;try{result=callback(doc);}catch(e){}
+  if(result)return result;
+  var frames=[];try{frames=doc.querySelectorAll("iframe");}catch(e){return null;}
+  for(var i=0;i<frames.length;i++){
+    try{var found=visit(frames[i].contentDocument,callback,depth+1);if(found)return found;}catch(e){}
+  }
+  return null;
+}
+function root(){try{return host&&host.contentDocument;}catch(e){return null;}}
+function controlDoc(){var r=root();return r&&visit(r,function(doc){return doc.querySelector('input[aria-label="Value"]')?doc:null;},0);}
+function wheelDoc(){var r=root();return r&&visit(r,function(doc){return doc.getElementById("wheel")&&doc.querySelector(".approved-cycle-number")?doc:null;},0);}
+function nativeSet(input,value){
+  if(!input)return false;
+  var win=input.ownerDocument.defaultView;
+  try{var d=Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype,"value");if(d&&d.set)d.set.call(input,String(value));else input.value=String(value);}catch(e){input.value=String(value);}
+  ["input","change","keyup"].forEach(function(type){try{input.dispatchEvent(new win.Event(type,{bubbles:true}));}catch(e){}});
+  return true;
+}
+function ensureLiveValueOverlay(price,symbol){
+  var doc=controlDoc(),input=doc&&doc.querySelector('input[aria-label="Value"]');if(!input)return false;
+  var wrap=input.parentElement;if(!wrap)return false;
+  try{wrap.style.setProperty("position","relative","important");}catch(e){}
+  var overlay=doc.getElementById("kawkabatLiveWheelValueOverlay");
+  if(!overlay){
+    overlay=doc.createElement("span");overlay.id="kawkabatLiveWheelValueOverlay";
+    overlay.style.cssText="position:absolute;left:3px;right:31px;top:2px;bottom:2px;display:flex;align-items:center;justify-content:flex-start;padding:0 10px;box-sizing:border-box;background:linear-gradient(#fdfefe,#dce5eb);border-radius:3px;color:#111;font:700 18px Arial,Tahoma,sans-serif;direction:ltr;pointer-events:none;z-index:20;white-space:nowrap;overflow:hidden";
+    wrap.appendChild(overlay);
+  }
+  overlay.textContent=Number(price).toFixed(2);
+  overlay.title=(symbol||"AmiBroker")+" live price";
+  overlay.dataset.symbol=String(symbol||"");overlay.dataset.livePrice=String(price);
+  return true;
+}
+function setAnchor(integerValue,symbol){
+  var doc=controlDoc(),input=doc&&doc.querySelector('input[aria-label="Value"]');if(!input)return false;
+  liveAnchor=integerValue;anchorSymbol=String(symbol||"").toUpperCase();anchorSetAt=Date.now();
+  nativeSet(input,String(integerValue));
+  return true;
+}
+function numberFromNode(node){
+  var values=[node.getAttribute("data-v131-display-value"),node.getAttribute("data-value"),node.getAttribute("data-tick")];
+  var primary=node.querySelector&&node.querySelector('tspan[data-v131-number-role="primary"]');if(primary)values.push(primary.textContent);values.push(node.textContent);
+  for(var i=0;i<values.length;i++){var n=Number(String(values[i]==null?"":values[i]).replace(/,/g,"").trim());if(Number.isFinite(n))return n;}
+  return null;
+}
+function findCell(doc,target){
+  var nodes=doc.querySelectorAll(".approved-cycle-number");
+  for(var i=0;i<nodes.length;i++){var n=numberFromNode(nodes[i]);if(n!==null&&Math.abs(n-target)<1e-7)return nodes[i];}
+  return null;
+}
+function point(radius,degree){var radians=degree*Math.PI/180;return{x:CX+Math.cos(radians)*radius,y:CY+Math.sin(radians)*radius};}
+function cellPath(innerRadius,outerRadius,centerDegree){
+  var half=180/DIVISIONS,start=centerDegree-half,end=centerDegree+half;
+  var a=point(innerRadius,start),b=point(outerRadius,start),c=point(outerRadius,end),d=point(innerRadius,end);
+  return ["M",a.x.toFixed(3),a.y.toFixed(3),"L",b.x.toFixed(3),b.y.toFixed(3),"A",outerRadius.toFixed(3),outerRadius.toFixed(3),"0 0 1",c.x.toFixed(3),c.y.toFixed(3),"L",d.x.toFixed(3),d.y.toFixed(3),"A",innerRadius.toFixed(3),innerRadius.toFixed(3),"0 0 0",a.x.toFixed(3),a.y.toFixed(3),"Z"].join(" ");
+}
+function clearLivePaint(doc){
+  ["kawkabatAmiBrokerLiveCell","kawkabatAmiBrokerLivePriceText"].forEach(function(id){var n=doc.getElementById(id);if(n)n.remove();});
+  var old=doc.querySelectorAll('[data-kawkabat-live-cell="true"]');for(var i=0;i<old.length;i++)old[i].removeAttribute("data-kawkabat-live-cell");
+}
+function paint(price,direction,symbol,attempt){
+  var doc=wheelDoc();if(!doc)return false;
+  var integerValue=Math.floor(Number(price));if(!Number.isFinite(integerValue))return false;
+  var node=findCell(doc,integerValue);
+  if(!node){
+    if((attempt||0)<2){setAnchor(integerValue,symbol);setTimeout(function(){paint(price,direction,symbol,(attempt||0)+1);},1100);}
+    return false;
+  }
+  var x=Number(node.getAttribute("x")),y=Number(node.getAttribute("y"));if(!Number.isFinite(x)||!Number.isFinite(y))return false;
+  clearLivePaint(doc);
+  var radius=Math.sqrt(Math.pow(x-CX,2)+Math.pow(y-CY,2));
+  var total=Math.max(1,Number(doc.documentElement.dataset.v360TotalNumericRings||doc.documentElement.dataset.layoutSize||11));
+  var width=(OUTER-INNER)/total,inner=Math.max(INNER,radius-width/2),outer=Math.min(OUTER,radius+width/2);
+  var centerDegree=Math.atan2(y-CY,x-CX)*180/Math.PI;
+  var d=String(direction||"FLAT").toUpperCase();var fill=d==="UP"?"#16a34a":d==="DOWN"?"#dc2626":"#d99b18";
+  var svg=doc.getElementById("wheel"),fills=doc.getElementById("specialFills")||svg;
+  var group=doc.createElementNS(NS,"g");group.id="kawkabatAmiBrokerLiveCell";group.setAttribute("pointer-events","none");group.setAttribute("data-symbol",String(symbol||""));group.setAttribute("data-price",String(price));
+  var path=doc.createElementNS(NS,"path");path.setAttribute("d",cellPath(inner,outer,centerDegree));path.setAttribute("fill",fill);path.setAttribute("fill-opacity","0.78");path.setAttribute("stroke",fill);path.setAttribute("stroke-width","5");path.setAttribute("vector-effect","non-scaling-stroke");group.appendChild(path);fills.appendChild(group);
+  node.setAttribute("data-kawkabat-live-cell","true");
+  var text=doc.createElementNS(NS,"text");text.id="kawkabatAmiBrokerLivePriceText";text.setAttribute("x",x);text.setAttribute("y",y);text.setAttribute("text-anchor","middle");text.setAttribute("dominant-baseline","middle");text.setAttribute("direction","ltr");text.setAttribute("pointer-events","none");text.setAttribute("fill","#ffffff");text.setAttribute("stroke","#111111");text.setAttribute("stroke-width","2.3");text.setAttribute("paint-order","stroke fill");text.setAttribute("font-family","Arial,Tahoma,sans-serif");text.setAttribute("font-size","20");text.setAttribute("font-weight","900");text.textContent=Number(price).toFixed(2);svg.appendChild(text);
+  lastCellInteger=integerValue;
+  doc.documentElement.dataset.amibrokerLive="true";doc.documentElement.dataset.amibrokerSymbol=String(symbol||"");doc.documentElement.dataset.amibrokerPrice=Number(price).toFixed(2);doc.documentElement.dataset.amibrokerDirection=d;doc.documentElement.dataset.amibrokerCell=String(integerValue);doc.documentElement.dataset.amibrokerAnchor=String(liveAnchor);
+  return true;
+}
+function apply(data){
+  if(!data||!Number.isFinite(Number(data.price)))return false;
+  var price=Number(data.price),symbol=String(data.symbol||"").toUpperCase(),direction=String(data.direction||"FLAT").toUpperCase(),integerValue=Math.floor(price);
+  if(liveAnchor===null||anchorSymbol!==symbol){setAnchor(integerValue,symbol);}
+  ensureLiveValueOverlay(price,symbol);
+  if(Date.now()-anchorSetAt<1150){setTimeout(function(){try{ensureLiveValueOverlay(price,symbol);paint(price,direction,symbol,0);}catch(e){}},1200);return true;}
+  if(!paint(price,direction,symbol,0))return true;
+  return true;
+}
+window.__kawkabatApplyLiveQuote=apply;
+window.__auditKawkabatAmiBrokerWheelLink=function(){return{installed:true,anchor:liveAnchor,symbol:anchorSymbol,lastCell:lastCellInteger,anchorAgeMs:anchorSetAt?Date.now()-anchorSetAt:null,exactPriceOverlay:true,greenUpRedDown:true,fixedGridBetweenRangeEscapes:true};};
+host&&host.addEventListener("load",function(){liveAnchor=null;anchorSymbol="";anchorSetAt=0;});
+}());
+</script>
+
+</body></html>

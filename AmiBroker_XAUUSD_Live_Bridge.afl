@@ -1,0 +1,80 @@
+// ============================================================
+// KAWKABAT / PHANTOM TRADER
+// AmiBroker REAL-TIME exporter - corrected canonical runtime path
+// API expected file:
+// C:\KawkabatSeherAlarqam\runtime\ami_live.json
+// ============================================================
+
+_SECTION_BEGIN("KAWKABAT FAST RT EXPORT - RUNTIME PATH");
+
+RequestTimedRefresh( 0.1, False );
+
+symbol = Name();
+
+// Real-time last price first; chart Close is fallback.
+price = GetRTData( "Last" );
+if( IsNull( price ) OR price <= 0 )
+{
+    price = LastValue( C );
+}
+
+// Consecutive exported value, not previous candle.
+prevKey = "KAWKABAT_RT_PREV_" + symbol;
+prev = StaticVarGet( prevKey );
+
+if( IsNull( prev ) OR prev <= 0 )
+{
+    prev = price;
+}
+
+direction = "FLAT";
+if( price > prev )
+{
+    direction = "UP";
+}
+else
+if( price < prev )
+{
+    direction = "DOWN";
+}
+
+seqKey = "KAWKABAT_RT_SEQ_" + symbol;
+seq = StaticVarGet( seqKey );
+if( IsNull( seq ) OR seq < 0 )
+{
+    seq = 0;
+}
+seq = seq + 1;
+
+StaticVarSet( prevKey, price );
+StaticVarSet( seqKey, seq );
+
+json =
+    "{"
+    + "\"ok\":true,"
+    + "\"symbol\":\"" + symbol + "\","
+    + "\"price\":" + StrFormat( "%.8f", price ) + ","
+    + "\"previous\":" + StrFormat( "%.8f", prev ) + ","
+    + "\"direction\":\"" + direction + "\","
+    + "\"seq\":" + StrFormat( "%.0f", seq ) + ","
+    + "\"source\":\"AmiBroker AFL\","
+    + "\"writer\":\"KAWKABAT_RT_RUNTIME_100MS\""
+    + "}";
+
+filePath = "C:\\KawkabatSeherAlarqam\\runtime\\ami_live.json";
+
+fh = fopen( filePath, "w" );
+if( fh )
+{
+    fputs( json, fh );
+    fclose( fh );
+}
+
+Title =
+    "KAWKABAT RT 100MS"
+    + " | " + symbol
+    + " | " + StrFormat( "%.5f", price )
+    + " | " + direction
+    + " | seq " + StrFormat( "%.0f", seq );
+
+_SECTION_END();
