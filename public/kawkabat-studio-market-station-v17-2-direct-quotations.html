@@ -5131,275 +5131,19 @@ window.__KAWKABAT_V209__={
 <!-- KAWKABAT_V209_HARD_TIMEFRAME_SWITCH_END -->
 
 <!-- KAWKABAT_V210_AMIBROKER_NATIVE_CHART_START -->
+<!-- V217 FIX: تعطيل الطبقة القديمة التي كانت تغطي الشموع بخلفية بيج -->
 <style>
-.chart-canvas-wrap{
-  position:relative!important;
-  overflow:hidden!important;
-}
-#k210NativeLayer{
-  position:absolute!important;
-  inset:0!important;
-  z-index:26000!important;
-  display:flex!important;
-  align-items:stretch!important;
-  justify-content:stretch!important;
-  background:#dcc79f!important;
-  border:0!important;
-}
-#k210NativeImg{
-  display:block!important;
-  width:100%!important;
-  height:100%!important;
-  min-width:100%!important;
-  min-height:100%!important;
-  object-fit:fill!important;
-  background:#dcc79f!important;
-  user-select:none!important;
-  -webkit-user-drag:none!important;
-}
-#k210NativeMessage{
-  position:absolute!important;
-  inset:0!important;
-  z-index:2!important;
-  display:none!important;
-  place-items:center!important;
-  padding:18px!important;
-  background:#0c1524!important;
-  color:#e6bd63!important;
-  text-align:center!important;
-  font:800 12px Arial,Tahoma,sans-serif!important;
-}
-#k210NativeMessage.show{display:grid!important}
-#k210NativeBadge{
-  position:absolute!important;
-  top:5px!important;
-  left:6px!important;
-  z-index:3!important;
-  padding:3px 6px!important;
-  border:1px solid rgba(67,88,122,.8)!important;
-  border-radius:5px!important;
-  background:rgba(9,17,30,.86)!important;
-  color:#62e2ad!important;
-  font:800 8px Consolas,Arial,sans-serif!important;
-  pointer-events:none!important;
+#k210NativeLayer {
+    display: none !important;
 }
 </style>
-
 <script>
-(function(){
-'use strict';
-
-var BRIDGE='http://127.0.0.1:8788';
-var N={
-  tf:'1m',
-  symbol:'XAUUSD',
-  busy:false,
-  failures:0,
-  lastOk:0
+window.__KAWKABAT_V210_NATIVE__ = {
+    disabled: true,
+    set: function(){},
+    refresh: function(){},
+    state: { disabled: true }
 };
-
-function q(id){return document.getElementById(id)}
-
-function currentSymbol(){
-  var known=[
-    q('chartSymbol'),
-    document.querySelector('[data-chart-symbol]'),
-    document.querySelector('.chart-symbol')
-  ];
-
-  for(var i=0;i<known.length;i++){
-    var el=known[i];
-    var txt=el?(el.dataset&&el.dataset.symbol?el.dataset.symbol:el.textContent):'';
-    var m=String(txt||'').toUpperCase().match(/\b[A-Z][A-Z0-9._-]{2,15}\b/);
-    if(m)return m[0];
-  }
-
-  var head=document.querySelector('.chart-head-row')||
-           document.querySelector('.chart-header')||
-           document.querySelector('.chart-card');
-
-  if(head){
-    var t=String(head.textContent||'').toUpperCase();
-    var m=t.match(/\bXAUUSD\b|\bXAGUSD\b|\bBTCUSD\b|\b[A-Z]{2,8}USD\b/);
-    if(m)return m[0];
-  }
-
-  return 'XAUUSD';
-}
-
-function normalizeTf(raw){
-  var s=String(raw||'').trim();
-  if(!s)return null;
-
-  if(/^([1-9]\d*)M$/.test(s))return s;
-
-  var low=s.toLowerCase().replace(/\s+/g,'');
-  if(/^[1-9]\d*$/.test(low))return Number(low)+'m';
-  if(/^([1-9]\d*)m$/.test(low))return low;
-  if(/^([1-9]\d*)h$/.test(low))return low;
-  if(/^([1-9]\d*)d$/.test(low))return low;
-  if(/^([1-9]\d*)w$/.test(low))return low;
-  return null;
-}
-
-function ensureLayer(){
-  var wrap=document.querySelector('.chart-canvas-wrap');
-  if(!wrap)return null;
-
-  var layer=q('k210NativeLayer');
-  if(!layer){
-    layer=document.createElement('div');
-    layer.id='k210NativeLayer';
-    layer.innerHTML=
-      '<img id="k210NativeImg" draggable="false" alt="AmiBroker Native Chart">'+
-      '<div id="k210NativeBadge">AMI NATIVE · WAIT</div>'+
-      '<div id="k210NativeMessage">شغّل AmiBroker و KAWKABAT Native Bridge</div>';
-    wrap.appendChild(layer);
-
-    var img=q('k210NativeImg');
-    img.addEventListener('load',function(){
-      N.failures=0;
-      N.lastOk=Date.now();
-      var msg=q('k210NativeMessage');
-      if(msg)msg.classList.remove('show');
-      var badge=q('k210NativeBadge');
-      if(badge)badge.textContent='AMI NATIVE · '+N.symbol+' · '+N.tf;
-    });
-    img.addEventListener('error',function(){
-      N.failures++;
-      if(N.failures>=2){
-        var msg=q('k210NativeMessage');
-        if(msg){
-          msg.textContent='AMI NATIVE OFFLINE · شغّل ملف Native Bridge واترك AmiBroker مفتوحًا';
-          msg.classList.add('show');
-        }
-        var badge=q('k210NativeBadge');
-        if(badge)badge.textContent='AMI NATIVE · OFFLINE';
-      }
-    });
-  }
-  return wrap;
-}
-
-async function setNative(tf){
-  tf=normalizeTf(tf)||N.tf;
-  N.tf=tf;
-  N.symbol=currentSymbol();
-
-  try{
-    var r=await fetch(
-      BRIDGE+'/set?symbol='+encodeURIComponent(N.symbol)+'&tf='+encodeURIComponent(N.tf)+'&_='+Date.now(),
-      {cache:'no-store'}
-    );
-    var d=await r.json();
-    if(!r.ok||!d.ok)throw new Error(d.error||('HTTP '+r.status));
-
-    var badge=q('k210NativeBadge');
-    if(badge)badge.textContent='AMI NATIVE · '+String(d.symbol||N.symbol)+' · '+N.tf;
-    refreshImage();
-  }catch(e){
-    var msg=q('k210NativeMessage');
-    if(msg){
-      msg.textContent='AMI NATIVE OFFLINE · '+String(e.message||e);
-      msg.classList.add('show');
-    }
-  }
-}
-
-function refreshImage(){
-  var wrap=ensureLayer();
-  var img=q('k210NativeImg');
-  if(!wrap||!img||N.busy)return;
-
-  N.symbol=currentSymbol();
-
-  var w=Math.max(420,Math.round(wrap.clientWidth||800));
-  var h=Math.max(280,Math.round(wrap.clientHeight||520));
-
-  var url=
-    BRIDGE+'/chart.png?symbol='+encodeURIComponent(N.symbol)+
-    '&tf='+encodeURIComponent(N.tf)+
-    '&w='+w+'&h='+h+'&_='+Date.now();
-
-  img.src=url;
-}
-
-function interceptTf(){
-  document.addEventListener('click',function(e){
-    var row=e.target&&e.target.closest?e.target.closest('#chartTfRow'):null;
-    if(!row)return;
-
-    var b=e.target.closest('button');
-    if(!b)return;
-
-    var raw=(b.textContent||'').trim();
-    var map={'1H':'1h','1D':'1d','1W':'1w','1M':'1M'};
-    if(!map[raw])return;
-
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-
-    var tf=map[raw];
-    var inp=q('k208TfInput')||q('k191TfInput');
-    if(inp)inp.value=tf;
-
-    row.querySelectorAll('button').forEach(function(x){
-      x.classList.toggle('active',x===b);
-      x.setAttribute('aria-pressed',x===b?'true':'false');
-    });
-
-    setNative(tf);
-  },true);
-
-  document.addEventListener('keydown',function(e){
-    if(e.key!=='Enter')return;
-
-    var input=e.target;
-    if(!input||(
-      input.id!=='k208TfInput' &&
-      input.id!=='k191TfInput' &&
-      !input.closest('#chartTfRow')
-    ))return;
-
-    var tf=normalizeTf(input.value);
-    if(!tf)return;
-
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-
-    input.value=tf;
-    setNative(tf);
-    input.blur();
-  },true);
-}
-
-function boot(){
-  ensureLayer();
-  interceptTf();
-
-  var inp=q('k208TfInput')||q('k191TfInput');
-  var initial=normalizeTf(inp&&inp.value)||'1m';
-  N.tf=initial;
-
-  setTimeout(function(){setNative(initial)},400);
-  setInterval(refreshImage,900);
-}
-
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',boot);
-}else{
-  boot();
-}
-
-window.__KAWKABAT_V210_NATIVE__={
-  set:setNative,
-  refresh:refreshImage,
-  state:N
-};
-
-}());
 </script>
 <!-- KAWKABAT_V210_AMIBROKER_NATIVE_CHART_END -->
 
@@ -5829,8 +5573,349 @@ window.__KAWKABAT_V213_HARD_STABLE__={open:openStudio,close:closeStudio,refresh:
 </script>
 <!-- KAWKABAT_V216_CHART_HEIGHT_ONLY_END -->
 
-</body>
+
+<!-- KAWKABAT_V217_TRUE_TIMEFRAME_FIX_START -->
+<script>
+(function(){
+'use strict';
+var API='http://127.0.0.1:8772',S={tf:'1m',symbol:'XAUUSD',busy:false,data:null};
+function q(id){return document.getElementById(id)}
+function norm(v){v=String(v||'').trim();if(v==='1M')return'1M';v=v.toLowerCase();var m={live:'1m',m1:'1m','1min':'1m',h1:'1h',d:'1d',w:'1w'};v=m[v]||v;return /^(1m|5m|15m|30m|1h|4h|1d|1w)$/.test(v)?v:null}
+function sym(){var e=q('chartSymbol')||document.querySelector('[data-chart-symbol]')||document.querySelector('.chart-symbol'),t=String(e?(e.dataset&&e.dataset.symbol||e.textContent):'XAUUSD').toUpperCase(),m=t.match(/\b[A-Z][A-Z0-9._-]{2,15}\b/);return m?m[0]:'XAUUSD'}
+function stopOld(){window.__KAWKABAT_V209_ACTIVE__=false;window.__KAWKABAT_V208_CONTROLLER_ACTIVE__=false;try{if(window.__KAWKABAT_V209__&&window.__KAWKABAT_V209__.state)window.__KAWKABAT_V209__.state.busy=true}catch(e){}}
+function status(t,b){var e=q('chartDataState');if(e){e.textContent=t;e.style.color=b?'#ff7373':'#43d99a'}}
+function adapt(d){return{ok:true,timeframe:S.tf,symbol:S.symbol,candles:(d.bars||[]).map(function(x){return{time:new Date(Number(x.t)).toISOString(),timestamp:Number(x.t),t:Number(x.t),open:+x.o,high:+x.h,low:+x.l,close:+x.c,volume:+(x.v||0),o:+x.o,h:+x.h,l:+x.l,c:+x.c,v:+(x.v||0)}})}}
+function render(d){var r=window.__KAWKABAT_V174__;if(!r||!r.state||typeof r.render!=='function'){status('V217 · RENDER WAIT',1);return}var a=adapt(d);S.data=a;r.state.tf=S.tf;r.state.data=a;r.render();var x=a.candles[a.candles.length-1];if(x)[['chartO',x.open],['chartH',x.high],['chartL',x.low],['chartC',x.close]].forEach(function(p){var e=q(p[0]);if(e)e.textContent=Number(p[1]).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:5})});status('V217 DB LIVE · '+S.tf+' · '+a.candles.length+' BARS',0)}
+async function load(){stopOld();if(S.busy)return;S.busy=true;S.symbol=sym();try{var r=await fetch(API+'/api/chart?symbol='+encodeURIComponent(S.symbol)+'&tf='+encodeURIComponent(S.tf)+'&limit=700&_='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);var d=await r.json();if(!d.ok||!Array.isArray(d.bars)||!d.bars.length)throw Error('NO BARS');render(d)}catch(e){status('V217 DATA ERROR · '+String(e.message||e),1)}finally{S.busy=false}}
+function choose(tf){tf=norm(tf);if(!tf)return;S.tf=tf;var i=q('k208TfInput')||q('k191TfInput');if(i)i.value=tf;load()}
+window.addEventListener('click',function(e){var row=e.target&&e.target.closest&&e.target.closest('#chartTfRow');if(!row)return;var b=e.target.closest('button');if(!b)return;var raw=(b.dataset&&(b.dataset.tf||b.dataset.k209Tf))||(b.textContent||'').trim(),tf=norm(raw);if(!tf)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();row.querySelectorAll('button').forEach(function(x){x.classList.toggle('active',x===b)});choose(tf)},true);
+window.addEventListener('keydown',function(e){var i=e.target;if(e.key!=='Enter'||!i||!(i.id==='k208TfInput'||i.id==='k191TfInput'))return;var tf=norm(i.value);if(!tf)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();choose(tf);i.blur()},true);
+function boot(){stopOld();var i=q('k208TfInput')||q('k191TfInput');S.tf=norm(i&&i.value)||'1m';load();setInterval(load,500);setInterval(stopOld,250)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,350)},{once:true});else setTimeout(boot,350);
+window.__KAWKABAT_V217__={choose:choose,reload:load,state:S};
+}());
+</script>
+<!-- KAWKABAT_V217_TRUE_TIMEFRAME_FIX_END -->
+
+<!-- KAWKABAT_V218_CLEAN_MINUTE_CHART_START -->
+<style id="k218-style">
+.chart-canvas-wrap{position:relative!important;display:block!important;width:100%!important;min-width:0!important;height:100%!important;min-height:360px!important;overflow:hidden!important;background:#dbc59d!important}
+#k218CleanChart{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;display:block!important;background:#dbc59d!important;z-index:30000!important;cursor:crosshair}
+#k218Badge{position:absolute;top:7px;left:8px;z-index:30002;padding:4px 8px;border-radius:5px;background:rgba(8,17,29,.88);color:#54dda6;font:800 9px Consolas,monospace;pointer-events:none}
+#k218Error{position:absolute;inset:0;z-index:30003;display:none;place-items:center;text-align:center;background:#101827;color:#ff8a8a;font:800 12px Arial;padding:20px}
+#k218Error.show{display:grid}
+</style>
+<script>
+(function(){
+'use strict';
+var API='http://127.0.0.1:8772';
+var X={bars:[],symbol:'XAUUSD',count:110,busy:false,drag:false,lastX:0,offset:0,raf:0};
+function id(x){return document.getElementById(x)}
+function stopOld(){
+  window.__KAWKABAT_V209_ACTIVE__=false;
+  window.__KAWKABAT_V208_CONTROLLER_ACTIVE__=false;
+  try{if(window.__KAWKABAT_V209__&&window.__KAWKABAT_V209__.state)window.__KAWKABAT_V209__.state.busy=true}catch(e){}
+  try{if(window.__KAWKABAT_V217__&&window.__KAWKABAT_V217__.state)window.__KAWKABAT_V217__.state.busy=true}catch(e){}
+  try{if(window.__KAWKABAT_V174__)window.__KAWKABAT_V174__.render=function(){}}catch(e){}
+}
+function currentSymbol(){
+  var e=id('chartSymbol')||document.querySelector('[data-chart-symbol]')||document.querySelector('.chart-symbol');
+  var t=String(e?(e.dataset&&e.dataset.symbol||e.textContent):'XAUUSD').toUpperCase();
+  var m=t.match(/\b(?:XAUUSD|XAGUSD|BTCUSD|TASI|[A-Z][A-Z0-9._-]{2,15})\b/);return m?m[0]:'XAUUSD';
+}
+function install(){
+  var wrap=document.querySelector('.chart-canvas-wrap');if(!wrap)return false;
+  if(!id('k218CleanChart')){
+    wrap.innerHTML='<canvas id="k218CleanChart"></canvas><div id="k218Badge">V218 · 1m · WAIT</div><div id="k218Error">WAITING FOR V17.2 DATA SERVER · 8772</div>';
+    bind();
+  }
+  return true;
+}
+function bind(){
+  var c=id('k218CleanChart');if(!c)return;
+  c.addEventListener('wheel',function(e){e.preventDefault();X.count=Math.max(25,Math.min(260,X.count+(e.deltaY>0?10:-10)));X.offset=0;draw()},{passive:false});
+  c.addEventListener('mousedown',function(e){X.drag=true;X.lastX=e.clientX;c.style.cursor='grabbing'});
+  window.addEventListener('mouseup',function(){X.drag=false;if(c)c.style.cursor='crosshair'});
+  window.addEventListener('mousemove',function(e){if(!X.drag)return;var dx=e.clientX-X.lastX;X.lastX=e.clientX;var step=Math.max(3,c.clientWidth/Math.max(25,X.count));X.offset=Math.max(0,Math.min(Math.max(0,X.bars.length-X.count),X.offset-Math.round(dx/step)));draw()});
+  if(window.ResizeObserver)new ResizeObserver(draw).observe(c.parentElement);else window.addEventListener('resize',draw);
+}
+function nice(v){if(!isFinite(v))return'--';return v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4})}
+function resize(c){var d=Math.max(1,window.devicePixelRatio||1),w=Math.max(320,Math.floor(c.clientWidth)),h=Math.max(260,Math.floor(c.clientHeight));if(c.width!==Math.floor(w*d)||c.height!==Math.floor(h*d)){c.width=Math.floor(w*d);c.height=Math.floor(h*d)}var g=c.getContext('2d');g.setTransform(d,0,0,d,0,0);return{g:g,w:w,h:h}}
+function draw(){
+  if(X.raf)cancelAnimationFrame(X.raf);X.raf=requestAnimationFrame(function(){
+    var c=id('k218CleanChart');if(!c)return;var z=resize(c),g=z.g,w=z.w,h=z.h;
+    g.clearRect(0,0,w,h);g.fillStyle='#dbc59d';g.fillRect(0,0,w,h);
+    var left=12,right=76,top=28,bottom=28,pw=Math.max(50,w-left-right),ph=Math.max(80,h-top-bottom);
+    if(!X.bars.length){g.fillStyle='#6d604b';g.font='700 13px Arial';g.fillText('WAITING FOR 1m CANDLES',left+20,top+35);return}
+    var end=Math.max(0,X.bars.length-X.offset),start=Math.max(0,end-X.count),a=X.bars.slice(start,end);if(!a.length)return;
+    var lo=Infinity,hi=-Infinity;a.forEach(function(b){lo=Math.min(lo,b.l);hi=Math.max(hi,b.h)});var span=Math.max(.0001,hi-lo),pad=span*.09;lo-=pad;hi+=pad;span=hi-lo;
+    function y(v){return top+(hi-v)/span*ph}
+    g.strokeStyle='rgba(96,83,61,.24)';g.lineWidth=1;g.font='11px Arial';g.fillStyle='#6a5f4e';g.textAlign='left';
+    for(var j=0;j<=6;j++){var yy=top+ph*j/6;g.beginPath();g.moveTo(left,yy);g.lineTo(left+pw,yy);g.stroke();g.fillText(nice(hi-span*j/6),left+pw+7,yy+4)}
+    for(var k=0;k<=8;k++){var xx=left+pw*k/8;g.beginPath();g.moveTo(xx,top);g.lineTo(xx,top+ph);g.stroke()}
+    var step=pw/a.length,body=Math.max(2,Math.min(12,step*.68));
+    a.forEach(function(b,i){var x=left+(i+.5)*step,up=b.c>=b.o,col=up?'#075cff':'#ed1717';g.strokeStyle=col;g.fillStyle=col;g.lineWidth=1.4;g.beginPath();g.moveTo(x,y(b.h));g.lineTo(x,y(b.l));g.stroke();var yo=y(b.o),yc=y(b.c),bh=Math.max(1.5,Math.abs(yc-yo));g.fillRect(x-body/2,Math.min(yo,yc),body,bh)});
+    var last=a[a.length-1],py=y(last.c);g.strokeStyle=last.c>=last.o?'#075cff':'#ed1717';g.setLineDash([5,4]);g.beginPath();g.moveTo(left,py);g.lineTo(left+pw,py);g.stroke();g.setLineDash([]);g.fillStyle=last.c>=last.o?'#075cff':'#ed1717';g.fillRect(left+pw,py-10,right,20);g.fillStyle='#fff';g.font='800 12px Arial';g.fillText(nice(last.c),left+pw+6,py+4);
+    g.fillStyle='#514a3f';g.font='10px Arial';g.textAlign='center';for(var n=0;n<a.length;n+=Math.max(1,Math.floor(a.length/7))){var d=new Date(a[n].t);g.fillText(String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),left+(n+.5)*step,h-8)}
+    var badge=id('k218Badge');if(badge)badge.textContent='V218 CLEAN · '+X.symbol+' · 1m · '+a.length+' BARS';
+    [['chartO',last.o],['chartH',last.h],['chartL',last.l],['chartC',last.c]].forEach(function(p){var e=id(p[0]);if(e)e.textContent=nice(p[1])});
+  })
+}
+async function load(){
+  stopOld();install();if(X.busy)return;X.busy=true;X.symbol=currentSymbol();
+  try{var r=await fetch(API+'/api/chart?symbol='+encodeURIComponent(X.symbol)+'&tf=1m&limit=1000&_='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);var d=await r.json();if(!d.ok||!Array.isArray(d.bars)||!d.bars.length)throw Error('NO 1m BARS');X.bars=d.bars.map(function(b){return{t:+b.t,o:+b.o,h:+b.h,l:+b.l,c:+b.c,v:+(b.v||0)}}).filter(function(b){return isFinite(b.t+b.o+b.h+b.l+b.c)});var er=id('k218Error');if(er)er.classList.remove('show');draw()}catch(e){var er=id('k218Error');if(er){er.textContent='V218 DATA ERROR · '+String(e.message||e)+' · تأكد أن 8772 يعمل';er.classList.add('show')}}finally{X.busy=false}
+}
+function lockMinute(){var i=id('k208TfInput')||id('k191TfInput');if(i)i.value='1m';var row=id('chartTfRow');if(row)row.querySelectorAll('button').forEach(function(b){var raw=String((b.dataset&&b.dataset.tf)||b.textContent||'').trim().toLowerCase();b.classList.toggle('active',raw==='1m')})}
+function boot(){stopOld();if(!install()){setTimeout(boot,300);return}lockMinute();load();setInterval(load,500);setInterval(stopOld,200)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+window.__KAWKABAT_V218__={reload:load,draw:draw,state:X};
+}());
+</script>
+<!-- KAWKABAT_V218_CLEAN_MINUTE_CHART_END -->
+
+<!-- KAWKABAT_V220_AMIBROKER_NATIVE_CHART_START -->
+<style id="k220-style">
+.chart-canvas-wrap{position:relative!important;width:100%!important;height:100%!important;min-width:0!important;min-height:420px!important;overflow:hidden!important;background:#dcc79f!important}
+#k218CleanChart,#k218Badge,#k218Error{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+#k220NativeLayer{position:absolute!important;inset:0!important;z-index:90000!important;display:block!important;background:#dcc79f!important;overflow:hidden!important}
+#k220NativeImage{display:block!important;width:100%!important;height:100%!important;min-width:100%!important;min-height:100%!important;object-fit:fill!important;background:#dcc79f!important;user-select:none!important;-webkit-user-drag:none!important}
+#k220NativeBadge{position:absolute!important;top:6px!important;left:7px!important;z-index:2!important;padding:4px 8px!important;border:1px solid rgba(47,84,75,.8)!important;border-radius:5px!important;background:rgba(7,18,24,.88)!important;color:#52dda5!important;font:800 9px Consolas,monospace!important;pointer-events:none!important}
+#k220NativeError{position:absolute!important;inset:0!important;z-index:3!important;display:none!important;place-items:center!important;text-align:center!important;padding:20px!important;background:#101827!important;color:#ff8585!important;font:800 12px Arial!important}
+#k220NativeError.show{display:grid!important}
+</style>
+<script>
+(function(){
+'use strict';
+var bridge='http://127.0.0.1:8788';
+var s={tf:'1m',symbol:'XAUUSD',busy:false,lastok:0,timer:0};
+function q(x){return document.getElementById(x)}
+function stopold(){
+  window.__KAWKABAT_V209_ACTIVE__=false;window.__KAWKABAT_V208_CONTROLLER_ACTIVE__=false;
+  try{if(window.__KAWKABAT_V209__&&window.__KAWKABAT_V209__.state)window.__KAWKABAT_V209__.state.busy=true}catch(e){}
+  try{if(window.__KAWKABAT_V217__&&window.__KAWKABAT_V217__.state)window.__KAWKABAT_V217__.state.busy=true}catch(e){}
+  try{if(window.__KAWKABAT_V218__&&window.__KAWKABAT_V218__.state)window.__KAWKABAT_V218__.state.busy=true}catch(e){}
+}
+function sym(){
+  var e=q('chartSymbol')||document.querySelector('[data-chart-symbol]')||document.querySelector('.chart-symbol');
+  var t=String(e?(e.dataset&&e.dataset.symbol||e.textContent):'XAUUSD').toUpperCase();
+  var m=t.match(/\b(?:XAUUSD|XAGUSD|BTCUSD|TASI|[A-Z][A-Z0-9._-]{2,15})\b/);return m?m[0]:'XAUUSD';
+}
+function norm(v){v=String(v||'').trim();if(v==='1M')return'1M';v=v.toLowerCase();var m={live:'1m',m1:'1m','1min':'1m',h1:'1h',d:'1d',w:'1w'};v=m[v]||v;return /^(1m|3m|5m|6m|9m|12m|15m|30m|36m|1h|4h|1d|1w)$/.test(v)?v:null}
+function install(){
+  var wrap=document.querySelector('.chart-canvas-wrap');if(!wrap)return false;
+  if(!q('k220NativeLayer')){
+    var layer=document.createElement('div');layer.id='k220NativeLayer';
+    layer.innerHTML='<img id="k220NativeImage" draggable="false" alt="AmiBroker Original Chart"><div id="k220NativeBadge">AMI ORIGINAL · WAIT</div><div id="k220NativeError">شغّل AmiBroker واترك جسر 8788 مفتوحًا</div>';
+    wrap.appendChild(layer);
+    var img=q('k220NativeImage');
+    img.onload=function(){s.lastok=Date.now();var er=q('k220NativeError');if(er)er.classList.remove('show');var b=q('k220NativeBadge');if(b)b.textContent='AMI ORIGINAL · '+s.symbol+' · '+s.tf};
+    img.onerror=function(){var er=q('k220NativeError');if(er){er.textContent='AMI ORIGINAL OFFLINE · تأكد أن 8788 يعمل';er.classList.add('show')}};
+    if(window.ResizeObserver)new ResizeObserver(refresh).observe(wrap);else window.addEventListener('resize',refresh);
+  }
+  return true;
+}
+function size(){var w=document.querySelector('.chart-canvas-wrap');return{w:Math.max(640,Math.round(w&&w.clientWidth||1000)),h:Math.max(420,Math.round(w&&w.clientHeight||620))}}
+function refresh(){
+  stopold();if(!install()||s.busy)return;s.busy=true;s.symbol=sym();var z=size(),img=q('k220NativeImage');
+  var url=bridge+'/chart.png?symbol='+encodeURIComponent(s.symbol)+'&tf='+encodeURIComponent(s.tf)+'&w='+z.w+'&h='+z.h+'&_='+Date.now();
+  img.src=url;setTimeout(function(){s.busy=false},300);
+}
+async function choose(tf){
+  tf=norm(tf);if(!tf)return;s.tf=tf;s.symbol=sym();var i=q('k208TfInput')||q('k191TfInput');if(i)i.value=tf;
+  try{await fetch(bridge+'/set?symbol='+encodeURIComponent(s.symbol)+'&tf='+encodeURIComponent(tf)+'&_='+Date.now(),{cache:'no-store'})}catch(e){}
+  setTimeout(refresh,350);
+}
+window.addEventListener('click',function(e){var row=e.target&&e.target.closest&&e.target.closest('#chartTfRow');if(!row)return;var b=e.target.closest('button');if(!b)return;var raw=(b.dataset&&(b.dataset.tf||b.dataset.k209Tf))||(b.textContent||'').trim(),tf=norm(raw);if(!tf)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();row.querySelectorAll('button').forEach(function(x){x.classList.toggle('active',x===b)});choose(tf)},true);
+window.addEventListener('keydown',function(e){var i=e.target;if(e.key!=='Enter'||!i||!(i.id==='k208TfInput'||i.id==='k191TfInput'))return;var tf=norm(i.value);if(!tf)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();choose(tf);i.blur()},true);
+function boot(){stopold();if(!install()){setTimeout(boot,300);return}choose('1m');s.timer=setInterval(refresh,900);setInterval(stopold,200)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+window.__KAWKABAT_V220__={set:choose,refresh:refresh,state:s};
+}());
+</script>
+<!-- KAWKABAT_V220_AMIBROKER_NATIVE_CHART_END -->
+
+<!-- KAWKABAT_V221_CORRECT_MINUTE_CHART_START -->
+<style id="k221-style">
+.chart-canvas-wrap{position:relative!important;width:100%!important;min-width:0!important;height:100%!important;min-height:420px!important;overflow:hidden!important;background:#dcc79f!important}
+#k218CleanChart,#k218Badge,#k218Error,#k220NativeLayer{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+#k221Canvas{position:absolute!important;inset:0!important;z-index:60000!important;display:block!important;width:100%!important;height:100%!important;background:#dcc79f!important}
+#k221Badge{position:absolute!important;top:7px!important;left:8px!important;z-index:60002!important;padding:4px 8px!important;border-radius:5px!important;background:rgba(7,18,25,.9)!important;color:#51dda6!important;font:800 9px Consolas,monospace!important;pointer-events:none!important}
+#k221Error{position:absolute!important;inset:0!important;z-index:60003!important;display:none!important;place-items:center!important;text-align:center!important;background:#101827!important;color:#ff8585!important;font:800 12px Arial!important}.show#k221Error{display:grid!important}
+</style>
+<script>
+(function(){
+'use strict';
+var api='http://127.0.0.1:8772',s={bars:[],symbol:'XAUUSD',busy:false,count:125,offset:0,drag:false,x:0,raf:0};
+function q(x){return document.getElementById(x)}
+function stopold(){window.__KAWKABAT_V209_ACTIVE__=false;window.__KAWKABAT_V208_CONTROLLER_ACTIVE__=false;try{if(window.__KAWKABAT_V209__)window.__KAWKABAT_V209__.state.busy=true}catch(e){}try{if(window.__KAWKABAT_V217__)window.__KAWKABAT_V217__.state.busy=true}catch(e){}try{if(window.__KAWKABAT_V218__)window.__KAWKABAT_V218__.state.busy=true}catch(e){}}
+function sym(){var e=q('chartSymbol')||document.querySelector('[data-chart-symbol]')||document.querySelector('.chart-symbol'),t=String(e?(e.dataset&&e.dataset.symbol||e.textContent):'XAUUSD').toUpperCase(),m=t.match(/\b(?:XAUUSD|XAGUSD|BTCUSD|TASI|[A-Z][A-Z0-9._-]{2,15})\b/);return m?m[0]:'XAUUSD'}
+function install(){var w=document.querySelector('.chart-canvas-wrap');if(!w)return false;if(!q('k221Canvas')){var c=document.createElement('canvas');c.id='k221Canvas';w.appendChild(c);var b=document.createElement('div');b.id='k221Badge';b.textContent='V221 · 1m · WAIT';w.appendChild(b);var e=document.createElement('div');e.id='k221Error';e.textContent='WAITING FOR 8772';w.appendChild(e);bind(c);if(window.ResizeObserver)new ResizeObserver(draw).observe(w)}return true}
+function bind(c){c.addEventListener('wheel',function(e){e.preventDefault();s.count=Math.max(35,Math.min(240,s.count+(e.deltaY>0?10:-10)));s.offset=0;draw()},{passive:false});c.addEventListener('mousedown',function(e){s.drag=true;s.x=e.clientX});window.addEventListener('mouseup',function(){s.drag=false});window.addEventListener('mousemove',function(e){if(!s.drag)return;var dx=e.clientX-s.x;s.x=e.clientX,step=Math.max(2,c.clientWidth/s.count);s.offset=Math.max(0,Math.min(Math.max(0,s.bars.length-s.count),s.offset-Math.round(dx/step)));draw()})}
+function clean(rows){var map={};(rows||[]).forEach(function(x){var b={t:+x.t,o:+x.o,h:+x.h,l:+x.l,c:+x.c,v:+(x.v||0)};if(isFinite(b.t+b.o+b.h+b.l+b.c)&&b.h>=Math.max(b.o,b.c)&&b.l<=Math.min(b.o,b.c))map[b.t]=b});var a=Object.keys(map).map(Number).sort(function(x,y){return x-y}).map(function(t){return map[t]});var rr=a.map(function(b){return b.h-b.l}).filter(function(x){return x>0&&x<50}).sort(function(x,y){return x-y}),med=rr.length?rr[Math.floor(rr.length/2)]:1,cap=Math.max(12,med*18);a=a.filter(function(b){return b.h-b.l<=cap});var out=[];a.forEach(function(b){var p=out[out.length-1];if(p&&b.o===b.h&&b.h===b.l&&b.l===b.c&&p.c===b.c&&b.t-p.t>=60000)return;out.push(b)});return out}
+function fmt(v){return Number(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4})}
+function setup(c){var d=Math.max(1,devicePixelRatio||1),w=Math.max(320,c.clientWidth),h=Math.max(300,c.clientHeight);if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}var g=c.getContext('2d');g.setTransform(d,0,0,d,0,0);return{g:g,w:w,h:h}}
+function draw(){if(s.raf)cancelAnimationFrame(s.raf);s.raf=requestAnimationFrame(function(){var c=q('k221Canvas');if(!c)return;var z=setup(c),g=z.g,w=z.w,h=z.h;g.fillStyle='#dcc79f';g.fillRect(0,0,w,h);var l=10,r=82,t=26,bt=30,pw=w-l-r,ph=h-t-bt,end=Math.max(0,s.bars.length-s.offset),start=Math.max(0,end-s.count),a=s.bars.slice(start,end);if(!a.length)return;var lo=Math.min.apply(null,a.map(function(b){return b.l})),hi=Math.max.apply(null,a.map(function(b){return b.h})),span=Math.max(.01,hi-lo),pad=Math.max(span*.08,.25);lo-=pad;hi+=pad;span=hi-lo;function y(v){return t+(hi-v)/span*ph}g.strokeStyle='rgba(92,78,57,.25)';g.fillStyle='#665b49';g.font='11px Arial';for(var j=0;j<=6;j++){var yy=t+ph*j/6;g.beginPath();g.moveTo(l,yy);g.lineTo(l+pw,yy);g.stroke();g.fillText(fmt(hi-span*j/6),l+pw+7,yy+4)}for(var k=0;k<=8;k++){var xx=l+pw*k/8;g.beginPath();g.moveTo(xx,t);g.lineTo(xx,t+ph);g.stroke()}var step=pw/a.length,bw=Math.max(2,Math.min(10,step*.68));a.forEach(function(b,i){var x=l+(i+.5)*step,col=b.c>=b.o?'#064fff':'#ed1515';g.strokeStyle=col;g.fillStyle=col;g.beginPath();g.moveTo(x,y(b.h));g.lineTo(x,y(b.l));g.stroke();var yo=y(b.o),yc=y(b.c);g.fillRect(x-bw/2,Math.min(yo,yc),bw,Math.max(1.5,Math.abs(yc-yo)))});var last=a[a.length-1],py=y(last.c),col=last.c>=last.o?'#064fff':'#ed1515';g.strokeStyle=col;g.setLineDash([5,4]);g.beginPath();g.moveTo(l,py);g.lineTo(l+pw,py);g.stroke();g.setLineDash([]);g.fillStyle=col;g.fillRect(l+pw,py-10,r,20);g.fillStyle='#fff';g.font='800 12px Arial';g.fillText(fmt(last.c),l+pw+6,py+4);g.fillStyle='#51493d';g.textAlign='center';g.font='10px Arial';for(var n=0;n<a.length;n+=Math.max(1,Math.floor(a.length/7))){var d=new Date(a[n].t);g.fillText(String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),l+(n+.5)*step,h-9)}g.textAlign='left';var badge=q('k221Badge');if(badge)badge.textContent='V221 CORRECT · '+s.symbol+' · 1m · '+a.length+' BARS';[['chartO',last.o],['chartH',last.h],['chartL',last.l],['chartC',last.c]].forEach(function(p){var e=q(p[0]);if(e)e.textContent=fmt(p[1])})})}
+async function load(){stopold();if(!install()||s.busy)return;s.busy=true;s.symbol=sym();try{var r=await fetch(api+'/api/chart?symbol='+encodeURIComponent(s.symbol)+'&tf=1m&limit=1000&_='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('http '+r.status);var d=await r.json();s.bars=clean(d.bars);if(!s.bars.length)throw Error('no correct minute bars');var e=q('k221Error');if(e)e.classList.remove('show');draw()}catch(x){var e=q('k221Error');if(e){e.textContent='V221 DATA ERROR · '+String(x.message||x);e.classList.add('show')}}finally{s.busy=false}}
+function boot(){stopold();if(!install()){setTimeout(boot,300);return}var i=q('k208TfInput')||q('k191TfInput');if(i)i.value='1m';load();setInterval(load,700);setInterval(stopold,200)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();window.__KAWKABAT_V221__={reload:load,state:s};
+}());
+</script>
+<!-- KAWKABAT_V221_CORRECT_MINUTE_CHART_END -->
+<style id="v220-final-show">[id="k220nativelayer" i]{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;z-index:90000!important}[id="k220nativeimage" i]{display:block!important;visibility:visible!important;opacity:1!important}[id="k221canvas" i],[id="k221badge" i],[id="k221error" i]{display:none!important;visibility:hidden!important;opacity:0!important}</style><style id="v220-force-visible">:is(#v220force,[id="k220nativelayer" i]){display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;z-index:90000!important}</style><style id="ami-main-controls-style">
+:is(#amifit,[id="k220nativeimage" i]){object-fit:contain!important}
+#ami-main-controls{position:absolute;left:10px;bottom:10px;z-index:95000;display:flex;gap:5px;padding:5px;background:rgba(7,15,25,.9);border:1px solid #3b4960;border-radius:7px}
+#ami-main-controls button{height:30px;min-width:38px;padding:0 9px;border:1px solid #45536a;border-radius:5px;background:#121d30;color:#e5bd69;font:800 11px Arial;cursor:pointer}
+#ami-main-controls button:hover{background:#e5bd69;color:#08101a}
+</style>
+<script>
+(function(){
+function install(){
+ var layer=document.querySelector('[id="k220nativelayer" i]');
+ if(!layer||document.getElementById('ami-main-controls'))return;
+ var bar=document.createElement('div');
+ bar.id='ami-main-controls';
+ var items=[
+  ['zoom_in','＋'],['zoom_out','－'],['left',''],['right',''],
+  ['all','ALL'],['normal','RESET'],['refresh','']
+ ];
+ items.forEach(function(item){
+  var b=document.createElement('button');
+  b.type='button';
+  b.textContent=item[1];
+  b.onclick=function(){
+   if(item[0]==='refresh'){
+    if(window.__KAWKABAT_V220__)window.__KAWKABAT_V220__.refresh();
+    return;
+   }
+   fetch('http://127.0.0.1:8788/command?action='+item[0]+'&_='+Date.now(),{cache:'no-store'})
+   .then(function(){setTimeout(function(){
+    if(window.__KAWKABAT_V220__)window.__KAWKABAT_V220__.refresh();
+   },500)});
+  };
+  bar.appendChild(b);
+ });
+ layer.appendChild(bar);
+}
+setInterval(install,500);
+install();
+}());
+</script><script id="v223-direct-native-image">
+(function(){
+function refresh(){
+ var img=document.querySelector('[id="k220nativeimage" i]');
+ var wrap=document.querySelector('.chart-canvas-wrap');
+ if(!img||!wrap)return;
+ var w=Math.max(640,Math.round(wrap.clientWidth||900));
+ var h=Math.max(420,Math.round(wrap.clientHeight||600));
+ img.src='/ami_chart_live.png?symbol=XAUUSD&tf=1m&w='+w+'&h='+h+'&_='+Date.now();
+}
+setTimeout(refresh,500);
+setInterval(refresh,1200);
+window.__v223refresh=refresh;
+}());
+</script><style id="v225-stable-style">
+#k225StableImage{
+ position:absolute!important;
+ inset:0!important;
+ width:100%!important;
+ height:100%!important;
+ object-fit:contain!important;
+ display:block!important;
+ visibility:visible!important;
+ opacity:1!important;
+ z-index:99999!important;
+ background:#dfc99d!important
+}
+[id="k220nativeimage" i]{visibility:hidden!important}
+</style>
+
+<script id="v225-stable-chart">
+(function(){
+ if(window.__K225_STABLE__) return;
+ window.__K225_STABLE__=true;
+
+ var busy=false;
+
+ function install(){
+  var layer=document.querySelector('[id="k220nativelayer" i]');
+  if(!layer){setTimeout(install,500);return;}
+
+  layer.style.position='relative';
+  layer.style.display='block';
+  layer.style.visibility='visible';
+  layer.style.opacity='1';
+
+  var stable=document.getElementById('k225StableImage');
+  if(!stable){
+   stable=document.createElement('img');
+   stable.id='k225StableImage';
+   stable.alt='AmiBroker XAUUSD 1-minute chart';
+   layer.appendChild(stable);
+  }
+
+  function refresh(){
+   if(busy)return;
+   busy=true;
+
+   var loader=new Image();
+   loader.onload=function(){
+    stable.src=loader.src;
+    busy=false;
+   };
+   loader.onerror=function(){
+    busy=false;
+   };
+   loader.src='/ami_chart_live.png?symbol=XAUUSD&tf=1m&w=1000&h=600&_='+Date.now();
+  }
+
+  refresh();
+  setInterval(refresh,2000);
+ }
+
+ if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',install);
+ }else{
+  install();
+ }
+})();
+</script><style id="v228-final-static-chart">
+[id="k220nativelayer" i]{
+ position:relative!important;
+ display:block!important;
+ visibility:visible!important;
+ opacity:1!important;
+ background:#dfc99d!important;
+}
+[id="k220nativelayer" i]::after{
+ content:""!important;
+ position:absolute!important;
+ inset:0!important;
+ display:block!important;
+ visibility:visible!important;
+ opacity:1!important;
+ z-index:2147483647!important;
+ background-color:#dfc99d!important;
+ background-image:url("/ami_chart_live.png?v=2281")!important;
+ background-position:center!important;
+ background-repeat:no-repeat!important;
+ background-size:contain!important;
+ pointer-events:none!important;
+}
+#k225StableImage,
+[id="k220nativeimage" i]{
+ display:none!important;
+}
+</style></body>
 </html>
+
+
+
+
+
+
+
+
+
 
 
 
